@@ -4,11 +4,23 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
-import downloadConfig from '../config/downloadConfig';
 
 const Banner = () => {
     const [bannerImages, setBannerImages] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [downloadConfig, setDownloadConfig] = useState({
+        version: 'U25.1119',
+        downloads: {
+            windows: {
+                label: '下载游戏（Win64）',
+                url: 'https://file.azurchess.top/AzurChess%20U25.1119.zip'
+            },
+            android: {
+                label: '下载游戏（Android）',
+                url: 'https://file.azurchess.top/AzurChess%20U25.1119.apk'
+            }
+        }
+    });
 
     // 动态加载图片列表
     useEffect(() => {
@@ -29,7 +41,26 @@ const Banner = () => {
             }
         };
 
+        const fetchDownloadConfig = async () => {
+            try {
+                const res = await fetch('/downloadConfig.json');
+                if (!res.ok) return;
+                const data = await res.json();
+                setDownloadConfig((prev) => ({
+                    ...prev,
+                    ...data,
+                    downloads: {
+                        ...prev.downloads,
+                        ...(data.downloads || {})
+                    }
+                }));
+            } catch (error) {
+                console.error('加载下载配置失败:', error);
+            }
+        };
+
         fetchImages();
+        fetchDownloadConfig();
     }, []);
 
     return (
