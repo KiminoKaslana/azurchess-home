@@ -9,6 +9,9 @@ const Footer = () => {
             <p style={{ color: '#666', margin: 0 }}>
               © {new Date().getFullYear()} AzurChess - 碧蓝战棋 同人游戏 | 本游戏仅作交流学习使用
             </p>
+            <a href="https://beian.miit.gov.cn/" style={{ color: '#666', margin: '8px 0 0' }}>
+              桂ICP备2025052590号-2
+            </a>
           </div>
         </div>
       </div>

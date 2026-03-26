@@ -4,6 +4,7 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
+import { staticApi } from '../api';
 
 const Banner = () => {
     const [bannerImages, setBannerImages] = useState([]);
@@ -43,17 +44,9 @@ const Banner = () => {
 
         const fetchDownloadConfig = async () => {
             try {
-                const res = await fetch('/downloadConfig.json');
-                if (!res.ok) return;
-                const data = await res.json();
-                setDownloadConfig((prev) => ({
-                    ...prev,
-                    ...data,
-                    downloads: {
-                        ...prev.downloads,
-                        ...(data.downloads || {})
-                    }
-                }));
+                const res = await staticApi.getDownloadConfig();
+                console.log('下载配置加载成功:', res);
+                setDownloadConfig(res.data);
             } catch (error) {
                 console.error('加载下载配置失败:', error);
             }

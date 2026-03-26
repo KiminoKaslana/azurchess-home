@@ -26,4 +26,15 @@ module.exports = function (app) {
             logLevel: 'warn',
         })
     );
+
+    // 静态文件代理：/api/file/* → https://file.azurchess.top/*
+    app.use(
+        '/api/file',
+        createProxyMiddleware({
+            target: 'https://file.azurchess.top',
+            changeOrigin: true,
+            pathRewrite: { '^/api/file': '' },
+            logLevel: 'warn',
+        })
+    );
 };

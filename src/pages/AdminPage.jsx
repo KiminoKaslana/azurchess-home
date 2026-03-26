@@ -2,17 +2,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Layout, Card, Form, Input, Button, Select, Tabs, Typography,
-    message, Tag, Space, Divider, InputNumber, Table, Upload, Alert,
+    Tag, Space, Divider, InputNumber, Table, Upload, Alert, App as AntdApp,
     Row, Col, Badge, Tooltip, Modal,
 } from 'antd';
 import {
     UserOutlined, LockOutlined, LogoutOutlined, SafetyCertificateOutlined,
     SettingOutlined, CloudUploadOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, DatabaseOutlined,
 } from '@ant-design/icons';
-import axios from 'axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import serverConfig from '../config/serverConfig';
+import { authApi, gameApi, staticApi, userApi } from '../api';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -74,7 +73,25 @@ const USER_ROLES = [
 // 武器类型（5种）× 舰船类型（9种）默认矩阵
 const DEFAULT_DAMAGE_MATRIX = Array.from({ length: 5 }, () => Array(9).fill(1.0));
 const WEAPON_TYPES = ['高爆', '穿甲', '导弹', '鱼雷', '航弹'];
-const UNIT_TYPES = ['战列', '重巡', '轻巡', '航母', '驱逐', '导弹驱逐', '超巡', '潜艇', '其他'];
+const UNIT_TYPES = ['战列', '重巡', '轻巡', '航母', '驱逐', '导弹驱逐', '超巡', '基地', '飞机'];
+const normalizeDamageMatrix = (source) => {
+    const rowCount = WEAPON_TYPES.length;
+    const colCount = UNIT_TYPES.length;
+    return Array.from({ length: rowCount }, (_, rowIdx) =>
+        Array.from({ length: colCount }, (_, colIdx) => {
+            const raw = source?.[rowIdx]?.[colIdx];
+            const val = Number(raw);
+            return Number.isFinite(val) ? val : 1.0;
+        })
+    );
+};
+const createEmptyResource = () => ({
+    key: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    Name: '',
+    Hash: '',
+    URL: '',
+    SubDirectory: '',
+});
 
 // ────────────────────────────────────────────────
 // 工具函数：从 localStorage 读写 auth 信息
@@ -90,29 +107,26 @@ const clearAuth = () => localStorage.removeItem(STORAGE_KEY);
 // 子组件：登录面板
 // ────────────────────────────────────────────────
 const LoginPanel = ({ onLogin }) => {
+    const { message: messageApi } = AntdApp.useApp();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async (values) => {
         setLoading(true);
         try {
-            const res = await axios.post(`${serverConfig.userServerBaseUrl}/Login`, {
-                UserName: values.username,
-                Password: values.password,
-                Version: serverConfig.version,
-            });
+            const res = await authApi.login(values.username, values.password);
             const { PlayerID, Token } = res.data;
             onLogin({ playerID: PlayerID, token: Token, username: values.username });
-            message.success('登录成功');
+            messageApi.success('登录成功');
         } catch (err) {
             const status = err.response?.status;
             const msg = err.response?.data;
             if (status === 403) {
-                message.error(msg || '用户名或密码错误');
+                messageApi.error(msg || '用户名或密码错误');
             } else if (status === 400) {
-                message.error('请求参数有误');
+                messageApi.error('请求参数有误');
             } else {
-                message.error('服务器异常，请稍后重试');
+                messageApi.error('服务器异常，请稍后重试');
             }
         } finally {
             setLoading(false);
@@ -151,25 +165,24 @@ const LoginPanel = ({ onLogin }) => {
 // 子组件：用户角色管理（需要 SuperAdmin）
 // ────────────────────────────────────────────────
 const UserRolePanel = ({ token }) => {
+    const { message: messageApi } = AntdApp.useApp();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (values) => {
+        const toastKey = 'user-role-update';
+        messageApi.loading({ content: '正在提交角色修改...', key: toastKey, duration: 0 });
         setLoading(true);
         try {
-            const res = await axios.post(
-                `${serverConfig.userServerBaseUrl}/AdminSetUserRole`,
-                { TargetUserId: values.targetUserId, NewRole: values.newRole },
-                { headers: { Token: token } }
-            );
-            message.success(res.data || '操作成功');
+            const res = await userApi.adminSetUserRole({ TargetUserId: values.targetUserId, NewRole: values.newRole }, token);
+            messageApi.success({ content: res.data || '角色修改已完成', key: toastKey });
         } catch (err) {
             const status = err.response?.status;
             const msg = err.response?.data;
-            if (status === 403) message.error('权限不足，需要 SuperAdmin');
-            else if (status === 401) message.error('Token 无效或已过期，请重新登录');
-            else if (status === 400) message.error(msg || '参数错误');
-            else message.error('服务器异常');
+            if (status === 403) messageApi.error({ content: '权限不足，需要 SuperAdmin', key: toastKey });
+            else if (status === 401) messageApi.error({ content: 'Token 无效或已过期，请重新登录', key: toastKey });
+            else if (status === 400) messageApi.error({ content: msg || '参数错误', key: toastKey });
+            else messageApi.error({ content: '服务器异常', key: toastKey });
         } finally {
             setLoading(false);
         }
@@ -218,8 +231,32 @@ const UserRolePanel = ({ token }) => {
 // 子组件：伤害系数矩阵编辑
 // ────────────────────────────────────────────────
 const DamageCoefficientPanel = ({ token }) => {
+    const { message: messageApi } = AntdApp.useApp();
     const [matrix, setMatrix] = useState(DEFAULT_DAMAGE_MATRIX.map(row => [...row]));
     const [loading, setLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(false);
+
+    const loadMatrix = useCallback(async (options = {}) => {
+        const { silent = false } = options;
+        setFetchLoading(true);
+        try {
+            const res = await gameApi.getDamageCoefficient();
+            const nextMatrix = normalizeDamageMatrix(res.data);
+            setMatrix(nextMatrix);
+            if (!silent) {
+                messageApi.success('已加载当前伤害系数矩阵');
+            }
+        } catch (err) {
+            const msg = err.response?.data;
+            messageApi.error(msg || '加载伤害系数失败');
+        } finally {
+            setFetchLoading(false);
+        }
+    }, [messageApi]);
+
+    useEffect(() => {
+        loadMatrix({ silent: true });
+    }, [loadMatrix]);
 
     const handleCellChange = (rowIdx, colIdx, value) => {
         setMatrix(prev => {
@@ -230,20 +267,18 @@ const DamageCoefficientPanel = ({ token }) => {
     };
 
     const handleSubmit = async () => {
+        const toastKey = 'damage-coefficient-update';
+        messageApi.loading({ content: '正在提交伤害矩阵更新...', key: toastKey, duration: 0 });
         setLoading(true);
         try {
-            const res = await axios.post(
-                `${serverConfig.gameServerBaseUrl}/UpdateDamageCoefficient`,
-                matrix,
-                { headers: { Token: token, 'Content-Type': 'application/json' } }
-            );
-            message.success(res.data || '伤害补正表更新成功');
+            const res = await gameApi.updateDamageCoefficient(matrix, token);
+            messageApi.success({ content: res.data || '伤害补正表更新已完成', key: toastKey });
         } catch (err) {
             const status = err.response?.status;
             const msg = err.response?.data;
-            if (status === 400) message.error(msg || '格式或维度错误');
-            else if (status === 401 || status === 403) message.error('权限不足或 Token 无效');
-            else message.error('服务器异常');
+            if (status === 400) messageApi.error({ content: msg || '格式或维度错误', key: toastKey });
+            else if (status === 401 || status === 403) messageApi.error({ content: '权限不足或 Token 无效', key: toastKey });
+            else messageApi.error({ content: '服务器异常', key: toastKey });
         } finally {
             setLoading(false);
         }
@@ -278,7 +313,14 @@ const DamageCoefficientPanel = ({ token }) => {
     const dataSource = WEAPON_TYPES.map((w, i) => ({ key: i, weaponType: w }));
 
     return (
-        <Card title="伤害系数矩阵（5 武器类型 × 9 舰船类型）">
+        <Card
+            title="伤害系数矩阵（5 武器类型 × 9 舰船类型）"
+            extra={
+                <Button icon={<ReloadOutlined />} loading={fetchLoading} onClick={() => loadMatrix()}>
+                    重新加载
+                </Button>
+            }
+        >
             <Alert
                 message="此操作需要 Admin 及以上权限。修改后将实时生效，请谨慎操作。"
                 type="info"
@@ -304,15 +346,47 @@ const DamageCoefficientPanel = ({ token }) => {
 // 子组件：资源信息管理
 // ────────────────────────────────────────────────
 const ResourceInfoPanel = ({ token }) => {
-    const [resources, setResources] = useState([
-        { key: Date.now(), Name: '', Hash: '', URL: '' },
-    ]);
+    const { message: messageApi } = AntdApp.useApp();
+    const [resources, setResources] = useState([createEmptyResource()]);
     const [platform, setPlatform] = useState('');
     const [loading, setLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(false);
     const [regenLoading, setRegenLoading] = useState(false);
 
+    const mapResourceRow = useCallback((resource) => ({
+        key: `${resource.Name || 'resource'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        Name: resource.Name || '',
+        Hash: resource.Hash || '',
+        URL: resource.URL || '',
+        SubDirectory: resource.SubDirectory || '',
+    }), []);
+
+    const loadResources = useCallback(async (targetPlatform = '', options = {}) => {
+        const { silent = false } = options;
+        setFetchLoading(true);
+        try {
+            const res = await gameApi.getResourceInfo(targetPlatform);
+            const list = Array.isArray(res.data) ? res.data : [];
+            setResources(list.length > 0 ? list.map(mapResourceRow) : [createEmptyResource()]);
+            if (!silent) {
+                messageApi.success(`已加载 ${list.length} 条资源信息`);
+            }
+        } catch (err) {
+            const status = err.response?.status;
+            const msg = err.response?.data;
+            if (status === 401 || status === 403) messageApi.error('权限不足或 Token 无效');
+            else messageApi.error(msg || '资源信息加载失败');
+        } finally {
+            setFetchLoading(false);
+        }
+    }, [mapResourceRow, messageApi]);
+
+    useEffect(() => {
+        loadResources('', { silent: true });
+    }, [loadResources]);
+
     const addRow = () => {
-        setResources(prev => [...prev, { key: Date.now(), Name: '', Hash: '', URL: '' }]);
+        setResources(prev => [...prev, createEmptyResource()]);
     };
 
     const removeRow = (key) => {
@@ -324,28 +398,30 @@ const ResourceInfoPanel = ({ token }) => {
     };
 
     const handleUpdateResource = async () => {
-        const invalid = resources.find(r => !r.Name || !r.Hash || !r.URL);
+        const sanitizedResources = resources.map(({ Name, Hash, URL, SubDirectory }) => ({
+            Name: Name.trim(),
+            Hash: Hash.trim(),
+            URL: URL.trim(),
+            SubDirectory: SubDirectory.trim(),
+        }));
+        const invalid = sanitizedResources.find(r => !r.Name || !r.Hash || !r.URL || !r.SubDirectory);
         if (invalid) {
-            message.warning('每条资源信息的 Name、Hash、URL 均不能为空');
+            messageApi.warning('每条资源信息的 Name、Hash、URL、SubDirectory 均不能为空');
             return;
         }
+        const toastKey = 'resource-info-update';
+        messageApi.loading({ content: '正在提交资源信息更新...', key: toastKey, duration: 0 });
         setLoading(true);
         try {
-            const headers = { Token: token, 'Content-Type': 'application/json' };
-            if (platform) headers['Platform'] = platform;
-            const payload = resources.map(({ Name, Hash, URL }) => ({ Name, Hash, URL }));
-            const res = await axios.post(
-                `${serverConfig.gameServerBaseUrl}/UpdateResourceInfo`,
-                payload,
-                { headers }
-            );
-            message.success(res.data || '资源信息更新成功');
+            const res = await gameApi.updateResourceInfo(sanitizedResources, token, platform);
+            messageApi.success({ content: res.data || '资源信息更新已完成', key: toastKey });
+            await loadResources(platform, { silent: true });
         } catch (err) {
             const status = err.response?.status;
             const msg = err.response?.data;
-            if (status === 400) message.error(msg || '资源项缺少必要字段');
-            else if (status === 401 || status === 403) message.error('权限不足或 Token 无效');
-            else message.error('服务器异常');
+            if (status === 400) messageApi.error({ content: msg || '资源项缺少必要字段', key: toastKey });
+            else if (status === 401 || status === 403) messageApi.error({ content: '权限不足或 Token 无效', key: toastKey });
+            else messageApi.error({ content: '服务器异常', key: toastKey });
         } finally {
             setLoading(false);
         }
@@ -354,18 +430,14 @@ const ResourceInfoPanel = ({ token }) => {
     const handleRegenerate = async () => {
         setRegenLoading(true);
         try {
-            const res = await axios.post(
-                `${serverConfig.gameServerBaseUrl}/RegenerateResourceInfo`,
-                null,
-                { headers: { Token: token } }
-            );
-            message.success(res.data || '已计划重新生成 ResourceInfo');
+            const res = await gameApi.regenerateResourceInfo(token);
+            messageApi.success(res.data || '已计划重新生成 ResourceInfo');
         } catch (err) {
             const status = err.response?.status;
             const msg = err.response?.data;
-            if (status === 503) message.error(msg || 'OSS 未启用');
-            else if (status === 401 || status === 403) message.error('权限不足或 Token 无效');
-            else message.error('服务器异常');
+            if (status === 503) messageApi.error(msg || 'OSS 未启用');
+            else if (status === 401 || status === 403) messageApi.error('权限不足或 Token 无效');
+            else messageApi.error('服务器异常');
         } finally {
             setRegenLoading(false);
         }
@@ -386,11 +458,18 @@ const ResourceInfoPanel = ({ token }) => {
                             style={{ width: 130 }}
                             allowClear
                         />
+                        <Button
+                            icon={<ReloadOutlined />}
+                            loading={fetchLoading}
+                            onClick={() => loadResources(platform)}
+                        >
+                            加载当前配置
+                        </Button>
                     </Space>
                 }
             >
                 <Alert
-                    message="此操作需要 Admin 及以上权限。留空 Platform 则写入默认 ResourceInfo.json。"
+                    message="此操作需要 Admin 及以上权限。页面会先加载当前配置；切换 Platform 后可重新加载对应 ResourceInfo。"
                     type="info"
                     showIcon
                     style={{ marginBottom: 12 }}
@@ -401,25 +480,32 @@ const ResourceInfoPanel = ({ token }) => {
                         <Col span={1}>
                             <Text type="secondary" style={{ fontSize: 12 }}>{idx + 1}</Text>
                         </Col>
-                        <Col span={6}>
+                        <Col span={4}>
                             <Input
                                 placeholder="Name（Bundle名）"
                                 value={row.Name}
                                 onChange={e => updateRow(row.key, 'Name', e.target.value)}
                             />
                         </Col>
-                        <Col span={6}>
+                        <Col span={5}>
                             <Input
                                 placeholder="Hash（如 abcdef1234）"
                                 value={row.Hash}
                                 onChange={e => updateRow(row.key, 'Hash', e.target.value)}
                             />
                         </Col>
-                        <Col span={9}>
+                        <Col span={7}>
                             <Input
                                 placeholder="URL（完整下载地址）"
                                 value={row.URL}
                                 onChange={e => updateRow(row.key, 'URL', e.target.value)}
+                            />
+                        </Col>
+                        <Col span={5}>
+                            <Input
+                                placeholder="SubDirectory（如 AssetBundles）"
+                                value={row.SubDirectory}
+                                onChange={e => updateRow(row.key, 'SubDirectory', e.target.value)}
                             />
                         </Col>
                         <Col span={2}>
@@ -485,7 +571,7 @@ const ShipFormFields = () => (
                 </Form.Item>
             </Col>
             <Col span={8}>
-                <Form.Item name="AssetPath" label="AssetPath（阵营）">
+                <Form.Item name="AssetPath" label="AssetPath（资源路径）">
                     <Input placeholder="如 America" />
                 </Form.Item>
             </Col>
@@ -545,39 +631,37 @@ const ShipFormFields = () => (
 // 子组件：舰船配置数据更新（单船 + 批量）
 // ────────────────────────────────────────────────
 const ShipDataPanel = ({ token }) => {
-    // --- 单船更新 ---
-    const [singleForm] = Form.useForm();
-    const [singleLoading, setSingleLoading] = useState(false);
-
+    const { message: messageApi } = AntdApp.useApp();
     // --- 批量更新 ---
     const [shipList, setShipList] = useState([]);
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState(null);
 
+    // --- 从远程加载 ---
+    const [fetchLoading, setFetchLoading] = useState(false);
+
+    const handleFetchShips = useCallback(async () => {
+        setFetchLoading(true);
+        try {
+            const res = await staticApi.getShips();
+            const data = Array.isArray(res.data) ? res.data : Object.values(res.data);
+            setShipList(data.map((s, i) => ({ ...s, _key: `remote_${i}_${Date.now()}` })));
+            messageApi.success(`已加载 ${data.length} 条舰船数据`);
+        } catch (err) {
+            messageApi.error('加载舰船数据失败，请检查网络或 file.azurchess.top 是否可访问');
+        } finally {
+            setFetchLoading(false);
+        }
+    }, [messageApi]);
+
+    useEffect(() => {
+        handleFetchShips();
+    }, [handleFetchShips]);
+
     // --- 编辑 Modal ---
     const [modalVisible, setModalVisible] = useState(false);
     const [editingKey, setEditingKey] = useState(null); // null = 新增
     const [modalForm] = Form.useForm();
-
-    const handleSingleSubmit = async (values) => {
-        setSingleLoading(true);
-        try {
-            const res = await axios.post(
-                `${serverConfig.gameServerBaseUrl}/UpdateShipData`,
-                values,
-                { headers: { Token: token, 'Content-Type': 'application/json' } }
-            );
-            message.success((typeof res.data === 'string' && res.data) || '舰船数据更新成功');
-        } catch (err) {
-            const status = err.response?.status;
-            const msg = err.response?.data;
-            if (status === 400) message.error(msg || '请求体为空或反序列化失败');
-            else if (status === 401 || status === 403) message.error('权限不足或 Token 无效');
-            else message.error(msg || '更新失败或服务器异常');
-        } finally {
-            setSingleLoading(false);
-        }
-    };
 
     const openAddModal = () => {
         setEditingKey(null);
@@ -609,26 +693,24 @@ const ShipDataPanel = ({ token }) => {
 
     const handleBatchSubmit = async () => {
         if (shipList.length === 0) {
-            message.warning('请先添加至少一条舰船数据');
+            messageApi.warning('请先添加至少一条舰船数据');
             return;
         }
+        const toastKey = 'ship-batch-update';
+        messageApi.loading({ content: '正在提交批量舰船更新...', key: toastKey, duration: 0 });
         setBatchLoading(true);
         setBatchResult(null);
         try {
             const payload = shipList.map(({ _key, ...s }) => s);
-            const res = await axios.post(
-                `${serverConfig.gameServerBaseUrl}/UpdateAllShipsData`,
-                payload,
-                { headers: { Token: token, 'Content-Type': 'application/json' } }
-            );
+            const res = await gameApi.updateAllShipsData(payload, token);
             setBatchResult(res.data);
-            message.success('批量更新请求已完成');
+            messageApi.success({ content: '批量更新请求已完成', key: toastKey });
         } catch (err) {
             const status = err.response?.status;
             const msg = err.response?.data;
-            if (status === 400) message.error(msg || '请求体为空或列表为空');
-            else if (status === 401 || status === 403) message.error('权限不足或 Token 无效');
-            else message.error(msg || '批量更新失败或服务器异常');
+            if (status === 400) messageApi.error({ content: msg || '请求体为空或列表为空', key: toastKey });
+            else if (status === 401 || status === 403) messageApi.error({ content: '权限不足或 Token 无效', key: toastKey });
+            else messageApi.error({ content: msg || '批量更新失败或服务器异常', key: toastKey });
         } finally {
             setBatchLoading(false);
         }
@@ -666,31 +748,22 @@ const ShipDataPanel = ({ token }) => {
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
-            {/* 单船更新 */}
-            <Card title="单船更新（POST /UpdateShipData）">
-                <Alert
-                    message="权限要求：Admin 及以上。Name 字段不能为空。"
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                />
-                <Form form={singleForm} onFinish={handleSingleSubmit} initialValues={EMPTY_SHIP} layout="vertical">
-                    <ShipFormFields />
-                    <Form.Item style={{ marginTop: 8 }}>
-                        <Button type="primary" htmlType="submit" loading={singleLoading} icon={<CloudUploadOutlined />}>
-                            提交单船更新
-                        </Button>
-                    </Form.Item>
-                </Form>
-            </Card>
-
             {/* 批量更新 */}
             <Card
-                title="批量更新（POST /UpdateAllShipsData）"
+                title="批量更新"
                 extra={
-                    <Button type="dashed" icon={<PlusOutlined />} onClick={openAddModal}>
-                        添加舰船
-                    </Button>
+                    <Space>
+                        <Button
+                            icon={<ReloadOutlined />}
+                            loading={fetchLoading}
+                            onClick={handleFetchShips}
+                        >
+                            重新加载
+                        </Button>
+                        <Button type="dashed" icon={<PlusOutlined />} onClick={openAddModal}>
+                            添加舰船
+                        </Button>
+                    </Space>
                 }
             >
                 <Alert
@@ -707,7 +780,7 @@ const ShipDataPanel = ({ token }) => {
                     size="small"
                     scroll={{ x: 'max-content' }}
                     style={{ marginBottom: 12 }}
-                    locale={{ emptyText: '暂无舰船数据，请点击右上角「添加舰船」' }}
+                    locale={{ emptyText: '正在加载舰船数据...' }}
                 />
                 <Space direction="vertical" style={{ width: '100%' }}>
                     <Button
@@ -757,6 +830,7 @@ const ShipDataPanel = ({ token }) => {
 // 主页面：AdminPage
 // ────────────────────────────────────────────────
 const AdminPage = () => {
+    const { message: messageApi } = AntdApp.useApp();
     const [auth, setAuth] = useState(null); // { playerID, token, username }
 
     // 页面加载时从 localStorage 恢复登录态
@@ -773,8 +847,8 @@ const AdminPage = () => {
     const handleLogout = useCallback(() => {
         setAuth(null);
         clearAuth();
-        message.info('已退出登录');
-    }, []);
+        messageApi.info('已退出登录');
+    }, [messageApi]);
 
     const tabItems = [
         {

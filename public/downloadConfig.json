@@ -1,13 +1,13 @@
 {
-  "version": "U25.1119",
+  "version": "26.0228",
   "downloads": {
     "windows": {
       "label": "下载游戏（Win64）",
-      "url": "https://file.azurchess.top/AzurChess%20U25.1119.zip"
+      "url": "https://file.azurchess.top/AzurChess%2026.0228.zip"
     },
     "android": {
       "label": "下载游戏（Android）",
-      "url": "https://file.azurchess.top/AzurChess%20U25.1119.apk"
+      "url": "https://file.azurchess.top/AzurChess%2026.0228.apk"
     }
   }
 }

@@ -1,9 +1,9 @@
 // src/pages/CompendiumPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Spin, Typography, Tag, message, Layout } from 'antd';
-import axios from 'axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { staticApi } from '../api';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const CompendiumPage = () => {
@@ -35,8 +35,8 @@ const CompendiumPage = () => {
             try {
                 setLoading(true);
                 const [shipsResponse, nameMapResponse] = await Promise.all([
-                    axios.get('/Ships.json'),
-                    axios.get('/NameMap.json')
+                    staticApi.getShips(),
+                    staticApi.getNameMap()
                 ]);
 
                 setCharacters(shipsResponse.data);
