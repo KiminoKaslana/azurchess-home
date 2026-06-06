@@ -27,6 +27,11 @@ export const authApi = {
             Version: serverConfig.version,
         });
     },
+
+    /** 检查登录态是否有效，返回Role */
+    me(token) {
+        return userApiClient.post('/Me', null, withToken(token));
+    },
 };
 
 export const userApi = {
@@ -62,10 +67,6 @@ export const gameApi = {
 
     regenerateResourceInfo(token) {
         return gameApiClient.post('/RegenerateResourceInfo', null, withToken(token));
-    },
-
-    updateAllShipsData(payload, token) {
-        return gameApiClient.post('/UpdateAllShipsData', payload, withToken(token, { 'Content-Type': 'application/json' }));
     },
 };
 
