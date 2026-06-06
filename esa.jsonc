@@ -1,0 +1,7 @@
+{
+  "name": "azurchess-Home",
+  "assets": {
+    "directory": "./build",
+    "notFoundStrategy": "singlePageApplication"
+  }
+}
