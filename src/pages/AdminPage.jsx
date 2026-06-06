@@ -76,6 +76,7 @@ const AdminPage = () => {
         authApi.me(saved.token).then((res) => {
             const { Role } = res.data;
             if (Role != "SuperAdmin" && Role != "Admin") {
+                setAuth(null)
                 return;
             }
             setAuth(saved)
