@@ -18,16 +18,26 @@ const { Title, Text } = Typography;
 // ────────────────────────────────────────────────
 // 子组件：登录面板
 // ────────────────────────────────────────────────
+
 const LoginPanel = ({ onLogin }) => {
     const { message: messageApi } = AntdApp.useApp();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-
+    // -----------------------------------------------
+    //                登录检查
+    // -----------------------------------------------
     const handleLogin = async (values) => {
         setLoading(true);
         try {
             const res = await authApi.login(values.username, values.password);
             const { PlayerID, Token } = res.data;
+            const meRes = await authApi.me(Token);
+            const { Role } = meRes.data;
+            console.log(meRes);
+            if (Role !== 'Admin' && Role !== 'SuperAdmin') {
+                messageApi.error('当前账号无管理员权限');
+                return;
+            }
             onLogin({ playerID: PlayerID, token: Token, username: values.username });
             messageApi.success('登录成功');
         } catch (err) {
