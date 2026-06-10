@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import CompendiumPage from './pages/CompendiumPage';
 import AdminPage from './pages/AdminPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { CURRENT_ENV } from './config/envConfig';
@@ -24,6 +25,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/compendium" element={<CompendiumPage />} />
+              <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </Router>

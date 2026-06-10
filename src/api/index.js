@@ -68,6 +68,14 @@ export const gameApi = {
     regenerateResourceInfo(token) {
         return gameApiClient.post('/RegenerateResourceInfo', null, withToken(token));
     },
+
+    // 排行榜：Player 级登录接口，游戏服按 PlayerID 头校验登录态（非 Token）。
+    // query: { SortBy: 'winRate'|'wins'|'games'|'avgDamage', MinGames: number, Limit: number }
+    getLeaderboard(query, playerID) {
+        return gameApiClient.post('/GetLeaderboard', query, {
+            headers: { PlayerID: playerID },
+        });
+    },
 };
 
 export const staticApi = {

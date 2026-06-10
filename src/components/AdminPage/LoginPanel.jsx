@@ -15,11 +15,23 @@ import { fileApiClient } from '../../api/client';
 
 const { Title, Text } = Typography;
 
+const isAdminRole = (role) => role === 'Admin' || role === 'SuperAdmin';
+
 // ────────────────────────────────────────────────
 // 子组件：登录面板
+// 通过 props 复用于管理页与排行榜页：
+//   isRoleAllowed - 角色准入判定，默认仅 Admin/SuperAdmin（保持管理页原行为）
+//   title / hint  - 面板标题与底部提示文案
+//   deniedMessage - 角色不被允许时的报错文案
 // ────────────────────────────────────────────────
 
-const LoginPanel = ({ onLogin }) => {
+const LoginPanel = ({
+    onLogin,
+    isRoleAllowed = isAdminRole,
+    deniedMessage = '当前账号无管理员权限',
+    title = <Space><SafetyCertificateOutlined /> 管理员登录</Space>,
+    hint = '仅供管理员使用。请使用 Admin 或 SuperAdmin 账号登录。',
+}) => {
     const { message: messageApi } = AntdApp.useApp();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -33,12 +45,11 @@ const LoginPanel = ({ onLogin }) => {
             const { PlayerID, Token } = res.data;
             const meRes = await authApi.me(Token);
             const { Role } = meRes.data;
-            console.log(meRes);
-            if (Role !== 'Admin' && Role !== 'SuperAdmin') {
-                messageApi.error('当前账号无管理员权限');
+            if (!isRoleAllowed(Role)) {
+                messageApi.error(deniedMessage);
                 return;
             }
-            onLogin({ playerID: PlayerID, token: Token, username: values.username });
+            onLogin({ playerID: PlayerID, token: Token, username: values.username, role: Role });
             messageApi.success('登录成功');
         } catch (err) {
             const status = err.response?.status;
@@ -58,7 +69,7 @@ const LoginPanel = ({ onLogin }) => {
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)' }}>
             <Card
-                title={<Space><SafetyCertificateOutlined /> 管理员登录</Space>}
+                title={title}
                 style={{ width: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
             >
                 <Form form={form} onFinish={handleLogin} layout="vertical" requiredMark={false}>
@@ -76,7 +87,7 @@ const LoginPanel = ({ onLogin }) => {
                 </Form>
                 <Divider />
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                    仅供管理员使用。请使用 Admin 或 SuperAdmin 账号登录。
+                    {hint}
                 </Text>
             </Card>
         </div>
