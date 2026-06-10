@@ -20,6 +20,25 @@ import ShipFormFields from './ShipFormFields';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+const CAMP_LABELS = {
+    America: '白鹰',
+    Russia: '北联',
+    China: '东煌',
+    England: '皇家',
+    Italy: '撒丁',
+    Germany: '铁血',
+    France: '鸢尾',
+    Japan: '重樱',
+    Siren: '塞壬',
+};
+
+const CAMP_FILTERS = Object.entries(CAMP_LABELS).map(([value, text]) => ({ text, value }));
+
+const zhNameCollator = new Intl.Collator('zh-CN-u-co-pinyin', {
+    numeric: true,
+    sensitivity: 'base',
+});
+
 // 空舰船数据模板
 const EMPTY_SHIP = {
     Name: '',
@@ -277,14 +296,20 @@ const ShipDataPanel = ({ token }) => {
     }, [shipList, token, messageApi]);
 
     const batchColumns = [
-        { title: 'Name', dataIndex: 'Name', key: 'Name', width: 120, ellipsis: true, sorter: (a, b) => a.Name.localeCompare(b.Name) },
         {
             title: '中文名', dataIndex: 'Name', key: 'cnName', width: 120, ellipsis: true,
-            sorter: (a, b) => (nameMap[a.Name] || a.Name).localeCompare(nameMap[b.Name] || b.Name),
+            sorter: (a, b) => zhNameCollator.compare(nameMap[a.Name] || a.Name, nameMap[b.Name] || b.Name),
             render: (v) => {
                 const cn = nameMap[v];
                 return cn ? <Text style={{ color: '#1677ff' }}>{cn}</Text> : <Text type="secondary">—</Text>;
             },
+        },
+        { title: 'Name', dataIndex: 'Name', key: 'Name', width: 120, ellipsis: true, sorter: (a, b) => a.Name.localeCompare(b.Name) },
+        {
+            title: '阵营', dataIndex: 'AssetPath', key: 'AssetPath', width: 60, ellipsis: true,
+            filters: CAMP_FILTERS,
+            onFilter: (value, record) => record.AssetPath === value,
+            render: (v) => CAMP_LABELS[v] || v,
         },
         {
             title: 'Type', dataIndex: 'Type', key: 'Type', width: 150, sorter: (a, b) => a.Type - b.Type,
