@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Spin, Typography, Tag, message, Layout } from 'antd';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { staticApi } from '../api';
+import { gameApi, staticApi } from '../api';
+import { fileApiClient } from '../api/client';
+import { IS_TEST } from '../config/envConfig';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const CompendiumPage = () => {
@@ -34,13 +36,33 @@ const CompendiumPage = () => {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [shipsResponse, nameMapResponse] = await Promise.all([
-                    staticApi.getShips(),
-                    staticApi.getNameMap()
-                ]);
+                if (IS_TEST) {
+                    // 测试服:先取资源清单,再按返回的 URL 拉取 Ships.json
+                    const [resourceInfoResponse, nameMapResponse] = await Promise.all([
+                        gameApi.getResourceInfo(),
+                        staticApi.getNameMap()
+                    ]);
 
-                setCharacters(shipsResponse.data);
-                setNameMap(nameMapResponse.data);
+                    const resourceList = Array.isArray(resourceInfoResponse.data) ? resourceInfoResponse.data : [];
+                    const shipResource = resourceList.find(resource => resource.Name === 'Ships.json');
+                    if (!shipResource?.URL) {
+                        throw new Error('未在资源列表中找到 Ships.json 记录');
+                    }
+
+                    const shipsPath = new URL(shipResource.URL).pathname;
+                    const shipsResponse = await fileApiClient.get(shipsPath);
+
+                    setCharacters(Array.isArray(shipsResponse.data) ? shipsResponse.data : Object.values(shipsResponse.data));
+                    setNameMap(nameMapResponse.data);
+                } else {
+                    // 正式服:直接读取文件服的 Ships.json(还原 main 分支)
+                    const [shipsResponse, nameMapResponse] = await Promise.all([
+                        staticApi.getShips(),
+                        staticApi.getNameMap()
+                    ]);
+                    setCharacters(shipsResponse.data);
+                    setNameMap(nameMapResponse.data);
+                }
                 setError(null);
             } catch (err) {
                 console.error('加载数据失败:', err);

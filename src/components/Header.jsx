@@ -1,8 +1,9 @@
 // src/components/Header.jsx
 import { Link, useLocation } from 'react-router-dom';
-import { HomeOutlined, ProfileOutlined, SettingOutlined } from '@ant-design/icons';
-import { Menu, Layout, Typography } from 'antd';
+import { HomeOutlined, ProfileOutlined, SettingOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Menu, Layout, Typography } from 'antd';
 import './Header.css'; // 用于自定义样式
+import { IS_TEST, OTHER_ENV, toggleEnv } from '../config/envConfig';
 
 const { Header } = Layout;
 const { Title } = Typography;
@@ -17,27 +18,37 @@ const AppHeader = () => {
           <img src="logo.png" alt="Game Logo" />
         </div>
         <Title level={4} className="game-title">
-          AZUR CHESS
+          {IS_TEST ? 'AZUR CHESS BETA' : 'AZUR CHESS'}
         </Title>
       </a>
 
-      {/* 右侧导航菜单 */}
-      <Menu 
-        mode="horizontal" 
-        theme="light" 
-        selectedKeys={[location.pathname]}
-        className="header-menu"
-      >
-        <Menu.Item key="/" icon={<HomeOutlined />} className="menu-item">
-          <Link to="/">Home</Link>
-        </Menu.Item>
-        <Menu.Item key="/compendium" icon={<ProfileOutlined />} className="menu-item">
-          <Link to="/compendium">图鉴</Link>
-        </Menu.Item>
-        <Menu.Item key="/admin" icon={<SettingOutlined />} className="menu-item">
-          <Link to="/admin">管理</Link>
-        </Menu.Item>
-      </Menu>
+      <div className="header-right">
+        {/* 导航菜单 */}
+        <Menu
+          mode="horizontal"
+          selectedKeys={[location.pathname]}
+          className="header-menu"
+        >
+          <Menu.Item key="/" icon={<HomeOutlined />} className="menu-item">
+            <Link to="/">Home</Link>
+          </Menu.Item>
+          <Menu.Item key="/compendium" icon={<ProfileOutlined />} className="menu-item">
+            <Link to="/compendium">图鉴</Link>
+          </Menu.Item>
+          <Menu.Item key="/admin" icon={<SettingOutlined />} className="menu-item">
+            <Link to="/admin">管理</Link>
+          </Menu.Item>
+        </Menu>
+
+        {/* 正式服 / 测试服切换:记忆选择并刷新页面 */}
+        <Button
+          className="env-toggle"
+          icon={<SwapOutlined />}
+          onClick={toggleEnv}
+        >
+          切换到{OTHER_ENV.label}
+        </Button>
+      </div>
     </Header>
   );
 };

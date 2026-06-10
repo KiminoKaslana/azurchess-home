@@ -256,6 +256,15 @@ const ShipDataPanel = ({ token }) => {
                 return;
             }
 
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('text/event-stream')) {
+                const parsed = await response.json();
+                setSseFinalResult(parsed);
+                setSsePhase('complete');
+                messageApi.success('批量舰船更新已完成');
+                return;
+            }
+
             // 读取 SSE 流
             const reader = response.body.getReader();
             const decoder = new TextDecoder();

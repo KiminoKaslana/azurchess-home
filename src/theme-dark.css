@@ -1,0 +1,432 @@
+/*
+ * Web Theme Dark
+ * 所有颜色均来源于 web-theme-dark 皮肤的 theme.json，
+ * 变量名后注释为对应的源 token，禁止引入皮肤之外的颜色。
+ */
+:root,
+.theme-light {
+    --acb-bg: #ffffff;
+    --acb-surface: #f5f5f5;
+    --acb-surface-2: #ffffff;
+    --acb-surface-3: #f5f5f5;
+    --acb-text: #333333;
+    --acb-text-strong: #111111;
+    --acb-text-muted: #666666;
+    --acb-disabled: #999999;
+    --acb-border: #eeeeee;
+    --acb-border-input: #d9d9d9;
+    --acb-primary: #1890ff;
+    --acb-primary-hover: #40a9ff;
+    --acb-accent: #1890ff;
+    --acb-link: #1890ff;
+    --acb-link-hover: #40a9ff;
+    --acb-focus: #1890ff66;
+    --acb-overlay: #00000059;
+    --acb-header-bg: rgba(255, 255, 255, 0.85);
+    --acb-header-bg-hover: rgba(255, 255, 255, 0.92);
+    --acb-header-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --acb-hero-overlay:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.48) 0%, rgba(0, 0, 0, 0.16) 38%, rgba(0, 0, 0, 0.58) 100%),
+        radial-gradient(ellipse 62% 52% at center, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.16) 68%, rgba(0, 0, 0, 0) 100%);
+}
+
+.theme-dark {
+    --acb-bg: #121314;            /* editor.background */
+    --acb-surface: #191A1B;       /* sideBar.background */
+    --acb-surface-2: #202122;     /* editorWidget.background */
+    --acb-surface-3: #242526;     /* editor.lineHighlightBackground */
+    --acb-text: #bfbfbf;          /* foreground */
+    --acb-text-strong: #ededed;   /* list.activeSelectionForeground */
+    --acb-text-muted: #8C8C8C;    /* descriptionForeground */
+    --acb-disabled: #555555;      /* disabledForeground / input.placeholderForeground */
+    --acb-border: #2A2B2CFF;      /* panel.border */
+    --acb-border-input: #333536;  /* input.border */
+    --acb-primary: #297AA0;       /* button.background */
+    --acb-primary-hover: #2B7DA3; /* button.hoverBackground */
+    --acb-accent: #3994BC;        /* tab.activeBorderTop / activityBarBadge.background */
+    --acb-link: #48A0C7;          /* textLink.foreground */
+    --acb-link-hover: #53A5CA;    /* textLink.activeForeground */
+    --acb-focus: #3994BCB3;       /* focusBorder */
+    --acb-overlay: #00000080;     /* 基于纯黑的半透明遮罩 */
+    --acb-header-bg: rgba(25, 26, 27, 0.85);
+    --acb-header-bg-hover: rgba(25, 26, 27, 0.92);
+    --acb-header-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --acb-hero-overlay:
+        linear-gradient(180deg, rgba(18, 19, 20, 0.65) 0%, rgba(18, 19, 20, 0.30) 38%, rgba(18, 19, 20, 0.78) 100%),
+        radial-gradient(ellipse 62% 52% at center, rgba(18, 19, 20, 0.62) 0%, rgba(18, 19, 20, 0.32) 68%, rgba(18, 19, 20, 0) 100%);
+}
+
+/* 测试服根容器:撑满视口并铺底暗色(正式服 .theme-light 无此规则,保持 main 原生背景) */
+.app-shell.theme-dark {
+    min-height: 100vh;
+    background: var(--acb-bg);        /* editor.background */
+    color: var(--acb-text);           /* foreground */
+}
+
+/* 页面通用容器(限定测试服,避免污染正式服的 .container 布局) */
+.theme-dark .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* ────────────── Admin（Ant Design 管理后台） ────────────── */
+.acb-admin-layout,
+.acb-admin-content {
+    background: var(--acb-bg);        /* editor.background */
+    color: var(--acb-text);           /* foreground */
+}
+
+.acb-admin-content {
+    min-height: calc(100vh - 64px);
+    padding: 32px 48px;
+}
+
+.acb-admin-content .ant-card {
+    background: var(--acb-surface-2); /* editorWidget.background */
+    border-color: var(--acb-border);  /* panel.border */
+    color: var(--acb-text);           /* foreground */
+}
+
+.acb-admin-content .ant-card-head {
+    background: var(--acb-surface-2); /* editorWidget.background */
+    border-bottom-color: var(--acb-border);
+    color: var(--acb-text-strong);    /* list.activeSelectionForeground */
+}
+
+.acb-admin-content .ant-card-body,
+.acb-admin-content .ant-typography,
+.acb-admin-content .ant-form-item-label > label,
+.acb-admin-content .ant-tabs-tab,
+.acb-admin-content .ant-table {
+    color: var(--acb-text);           /* foreground */
+}
+
+.acb-admin-content .ant-typography-secondary,
+.acb-admin-content .ant-typography.ant-typography-secondary {
+    color: var(--acb-text-muted);     /* descriptionForeground */
+}
+
+.acb-admin-content .ant-divider {
+    border-color: var(--acb-border);  /* panel.border */
+}
+
+.acb-admin-content .ant-tabs-nav::before {
+    border-bottom-color: var(--acb-border);
+}
+
+.acb-admin-content .ant-tabs-tab:hover,
+.acb-admin-content .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: var(--acb-link);           /* textLink.foreground */
+}
+
+.acb-admin-content .ant-tabs-ink-bar {
+    background: var(--acb-accent);    /* activityBarBadge.background */
+}
+
+.acb-admin-content .ant-input,
+.acb-admin-content .ant-input-affix-wrapper,
+.acb-admin-content .ant-input-number,
+.acb-admin-content .ant-select-selector {
+    background: var(--acb-surface);   /* input.background */
+    border-color: var(--acb-border-input); /* input.border */
+    color: var(--acb-text);           /* input.foreground */
+}
+
+.theme-dark .acb-admin-content input:-webkit-autofill,
+.theme-dark .acb-admin-content input:-webkit-autofill:hover,
+.theme-dark .acb-admin-content input:-webkit-autofill:focus,
+.theme-dark .acb-admin-content input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px var(--acb-surface) inset;
+    -webkit-text-fill-color: var(--acb-text);
+    caret-color: var(--acb-text);
+    transition: background-color 9999s ease-out 0s;
+}
+
+.acb-admin-content .ant-input::placeholder,
+.acb-admin-content .ant-input-number-input::placeholder,
+.acb-admin-content .ant-select-selection-placeholder {
+    color: var(--acb-disabled);       /* input.placeholderForeground */
+}
+
+.acb-admin-content .ant-input:hover,
+.acb-admin-content .ant-input-affix-wrapper:hover,
+.acb-admin-content .ant-input-number:hover,
+.acb-admin-content .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+    border-color: var(--acb-focus);   /* focusBorder */
+}
+
+.acb-admin-content .ant-input:focus,
+.acb-admin-content .ant-input-focused,
+.acb-admin-content .ant-input-affix-wrapper-focused,
+.acb-admin-content .ant-input-number-focused,
+.acb-admin-content .ant-select-focused .ant-select-selector {
+    border-color: var(--acb-focus);   /* focusBorder */
+    box-shadow: 0 0 0 2px #3994BC33;  /* inputOption.activeBackground */
+}
+
+.acb-admin-content .ant-table-wrapper .ant-table,
+.acb-admin-content .ant-table-wrapper .ant-table-container,
+.acb-admin-content .ant-table-wrapper .ant-table-thead > tr > th,
+.acb-admin-content .ant-table-wrapper .ant-table-tbody > tr > td {
+    background: var(--acb-surface-2); /* editorWidget.background */
+    border-color: var(--acb-border);  /* panel.border */
+    color: var(--acb-text);           /* foreground */
+}
+
+.acb-admin-content .ant-table-wrapper .ant-table-thead > tr > th {
+    background: var(--acb-surface-3); /* editor.lineHighlightBackground */
+    color: var(--acb-text-strong);    /* list.activeSelectionForeground */
+}
+
+.acb-admin-content .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+    background: var(--acb-surface-3); /* editor.lineHighlightBackground */
+}
+
+.acb-admin-content .ant-alert-info {
+    background: #1E3A47;              /* inputValidation.infoBackground */
+    border-color: #3994BC;            /* inputValidation.infoBorder */
+}
+
+.acb-admin-content .ant-alert-warning {
+    background: #352A05;              /* inputValidation.warningBackground */
+    border-color: #B89500;            /* inputValidation.warningBorder */
+}
+
+.acb-admin-content .ant-alert-message,
+.acb-admin-content .ant-alert-description {
+    color: var(--acb-text);           /* foreground */
+}
+
+.acb-admin-content .ant-btn-default {
+    background: var(--acb-surface);   /* sideBar.background */
+    border-color: var(--acb-border-input); /* button.secondaryBorder */
+    color: var(--acb-text);           /* foreground */
+}
+
+.acb-admin-content .ant-btn-default:not(:disabled):hover {
+    background: var(--acb-surface-3); /* textBlockQuote.background */
+    border-color: var(--acb-primary-hover); /* button.hoverBackground */
+    color: var(--acb-link-hover);     /* textLink.activeForeground */
+}
+
+/* ────────────── Hero（首屏下载区） ────────────── */
+.acb-hero {
+    position: relative;
+    height: calc(100vh - 64px);
+    min-height: 560px;
+    overflow: hidden;
+    background: var(--acb-bg);        /* editor.background */
+}
+
+.acb-hero__slide {
+    height: 100%;
+    background-position: center;
+    background-size: cover;
+}
+
+/* 在角色立绘上叠加暗色渐变，保证文字可读且不过度遮挡画面 */
+.acb-hero__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 16px;
+    background: var(--acb-hero-overlay);
+}
+
+.acb-hero__title {
+    margin: 0;
+    font-size: clamp(36px, 5vw, 52px);
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--acb-text-strong);    /* list.activeSelectionForeground */
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
+}
+
+.acb-hero__subtitle {
+    margin: 18px 0 6px;
+    font-size: clamp(15px, 1.6vw, 19px);
+    letter-spacing: 2px;
+    color: var(--acb-text);           /* foreground */
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.75);
+}
+
+.acb-hero__hint {
+    margin: 0 0 22px;
+    font-size: 14px;
+    color: var(--acb-text-muted);     /* descriptionForeground */
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
+/* QQ 频道徽标行 */
+.acb-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.acb-channel__label {
+    font-size: 13px;
+    color: var(--acb-text-muted);     /* descriptionForeground */
+}
+
+/* shields.io 图片徽标：自身已带配色，这里只负责对齐与交互反馈 */
+.acb-channel__badge {
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+}
+
+.acb-channel__badge img {
+    display: block;
+    height: 20px;
+    width: auto;
+}
+
+.acb-channel__badge:hover {
+    opacity: 0.85;
+}
+
+/* 下载按钮组 */
+.acb-downloads {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.acb-hero__version {
+    margin: 0;
+    font-size: 13px;
+    color: var(--acb-text-muted);     /* descriptionForeground */
+    letter-spacing: 1px;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
+/* ────────────── About（游戏简介） ────────────── */
+.acb-about {
+    background: var(--acb-bg);        /* editor.background */
+    padding: 96px 0;
+}
+
+.acb-about__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 48px;
+}
+
+.acb-about__text {
+    flex: 1 1 320px;
+}
+
+.acb-about__title {
+    margin: 0 0 20px;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--acb-text-strong);    /* list.activeSelectionForeground */
+}
+
+.acb-about__desc {
+    font-size: 16px;
+    line-height: 1.9;
+    color: var(--acb-text-muted);     /* descriptionForeground */
+}
+
+.acb-about__desc a {
+    color: var(--acb-link);           /* textLink.foreground */
+    text-decoration: none;
+}
+
+.acb-about__desc a:hover {
+    color: var(--acb-link-hover);     /* textLink.activeForeground */
+}
+
+.acb-about__media {
+    flex: 1 1 360px;
+    min-width: 300px;
+}
+
+.acb-about__carousel {
+    border: 1px solid var(--acb-border);  /* panel.border */
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+.acb-about__shot {
+    display: block;
+    width: 100%;
+    height: 380px;
+    object-fit: cover;
+    background: var(--acb-surface-2); /* editorWidget.background */
+}
+
+.acb-about__placeholder {
+    height: 380px;
+    border-radius: 12px;
+    background: var(--acb-surface-2); /* editorWidget.background */
+    border: 1px solid var(--acb-border);
+}
+
+/* ────────────── Footer ────────────── */
+.acb-footer {
+    background: var(--acb-surface);   /* sideBar.background */
+    border-top: 1px solid var(--acb-border); /* panel.border */
+    padding: 26px 0;
+}
+
+.acb-footer__text {
+    margin: 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--acb-text-muted);     /* descriptionForeground */
+}
+
+.acb-footer__text a {
+    color: var(--acb-text-muted);     /* descriptionForeground */
+    margin-left: 8px;
+    text-decoration: none;
+}
+
+.acb-footer__text a:hover {
+    color: var(--acb-link-hover);     /* textLink.activeForeground */
+}
+
+/* Swiper 分页/导航箭头使用主题强调色 */
+.acb-about__carousel .swiper-button-next,
+.acb-about__carousel .swiper-button-prev {
+    color: var(--acb-link);           /* textLink.foreground */
+}
+
+.acb-about__carousel .swiper-pagination-bullet {
+    background: var(--acb-text-muted);    /* descriptionForeground */
+    opacity: 0.6;
+}
+
+.acb-about__carousel .swiper-pagination-bullet-active {
+    background: var(--acb-accent);    /* activityBarBadge.background */
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .acb-about {
+        padding: 64px 0;
+    }
+
+    .acb-about__inner {
+        gap: 28px;
+    }
+}

@@ -13,6 +13,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { authApi, gameApi, staticApi, userApi } from '../api';
 import { fileApiClient } from '../api/client';
+import { IS_TEST } from '../config/envConfig';
 
 import LoginPanel from '../components/AdminPage/LoginPanel'
 import UserRolePanel from '../components/AdminPage/UserRolePanel';
@@ -129,9 +130,12 @@ const AdminPage = () => {
     ];
 
     return (
-        <Layout style={{ minHeight: '100vh' }}>
+        <Layout className={IS_TEST ? 'acb-admin-layout' : undefined} style={{ minHeight: '100vh' }}>
             <Header />
-            <Content style={{ padding: '32px 48px', background: '#f5f5f5' }}>
+            <Content
+                className={IS_TEST ? 'acb-admin-content' : undefined}
+                style={IS_TEST ? undefined : { padding: '32px 48px', background: '#f5f5f5' }}
+            >
                 {initializing ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)' }}>
                         <Card><Text type="secondary">正在验证用户信息...</Text></Card>

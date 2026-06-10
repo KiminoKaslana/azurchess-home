@@ -1,65 +1,143 @@
+/* ───────────── 公共布局(正式服 / 测试服共用) ───────────── */
 .custom-header {
     position: sticky;
     top: 0;
     z-index: 100;
     width: 100%;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.logo-icon img {
+    display: flex;
+    justify-self: center;
+}
+
+.game-title {
+    margin: 0 !important;
+    font-weight: 600;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
+}
+
+.header-menu {
+    border-bottom: none !important;
+    background: transparent;
+}
+
+.env-toggle {
+    flex: 0 0 auto;
+}
+
+.ant-menu {
+    background: transparent;
+}
+
+.ant-menu-horizontal {
+    border-bottom: none !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item {
+    padding: 0 16px;
+}
+
+/* ───────────── 正式服(亮色,还原 main 分支样式) ───────────── */
+.theme-light .custom-header {
     background: rgba(255, 255, 255, 0.85);
     /* 半透明白色背景 */
     backdrop-filter: blur(4px);
     /* 毛玻璃效果增强半透明质感 */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     /* 轻微投影 */
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     transition: all 0.3s ease;
-    /* 平滑过渡效果 */
 }
 
-.custom-header:hover {
+.theme-light .custom-header:hover {
     background: rgba(255, 255, 255, 0.92);
 }
 
-.header-left {
-    display: flex;
-    align-items: center;
+.theme-light .header-left {
     gap: 16px;
 }
 
-.logo-icon img {
-    display: flex;
+.theme-light .logo-icon img {
     height: 40px;
     width: auto;
     object-fit: contain;
-    justify-self: center;
 }
 
-.game-title {
-    margin: 0 !important;
+.theme-light .game-title {
     color: #1890ff;
-    /* 主色调 - 可根据实际调整 */
-    font-weight: 600;
+    /* 主色调 */
 }
 
-.header-menu {
-    border-bottom: none !important;
-    /* 移除默认下划线 */
-}
-
-/* 调整菜单项样式 */
-.ant-menu{
-    background: transparent;
-}
-
-.ant-menu-horizontal>.ant-menu-item {
-    padding: 0 16px;
-}
-
-.ant-menu-horizontal>.ant-menu-item-selected {
+.theme-light .ant-menu-horizontal > .ant-menu-item-selected {
     color: #1890ff !important;
 }
 
-.ant-menu-horizontal>.ant-menu-item-selected::after {
+.theme-light .ant-menu-horizontal > .ant-menu-item-selected::after {
     border-bottom-color: #1890ff !important;
+}
+
+/* ───────────── 测试服(暗色,毛玻璃 + 主题变量) ───────────── */
+.theme-dark .custom-header {
+    background: var(--acb-header-bg);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--acb-header-shadow);
+    border-bottom: 1px solid var(--acb-border);
+    transition: background 0.3s ease;
+}
+
+.theme-dark .custom-header:hover {
+    background: var(--acb-header-bg-hover);
+}
+
+.theme-dark .header-left {
+    gap: 14px;
+}
+
+.theme-dark .logo-icon img {
+    height: 38px;
+    width: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.theme-dark .game-title {
+    color: var(--acb-link) !important; /* textLink.foreground */
+    letter-spacing: 2px;
+}
+
+.theme-dark .ant-menu-horizontal > .ant-menu-item {
+    color: var(--acb-text); /* foreground */
+}
+
+.theme-dark .ant-menu-horizontal > .ant-menu-item:hover {
+    color: var(--acb-link) !important; /* textLink.foreground */
+}
+
+.theme-dark .ant-menu-horizontal > .ant-menu-item:hover::after {
+    border-bottom-color: var(--acb-link) !important;
+}
+
+.theme-dark .ant-menu-horizontal > .ant-menu-item-selected {
+    color: var(--acb-link) !important; /* textLink.foreground */
+}
+
+.theme-dark .ant-menu-horizontal > .ant-menu-item-selected::after {
+    border-bottom-color: var(--acb-accent) !important; /* activityBarBadge.background */
 }
