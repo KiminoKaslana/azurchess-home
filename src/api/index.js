@@ -45,6 +45,16 @@ export const gameApi = {
         return gameApiClient.post('/GetDamageCoefficient');
     },
 
+    getManual() {
+        return gameApiClient.post('/GetManual', null, {
+            responseType: 'text',
+        });
+    },
+
+    updateManual(content, token) {
+        return gameApiClient.post('/UpdateManual', content, withToken(token, { 'Content-Type': 'text/plain; charset=utf-8' }));
+    },
+
     updateDamageCoefficient(matrix, token) {
         return gameApiClient.post('/UpdateDamageCoefficient', matrix, withToken(token, { 'Content-Type': 'application/json' }));
     },

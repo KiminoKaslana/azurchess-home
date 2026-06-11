@@ -1,0 +1,113 @@
+.acb-manual-layout {
+    min-height: 100vh;
+    background: var(--acb-bg);
+}
+
+.acb-manual-content {
+    min-height: calc(100vh - 64px);
+    padding: 40px 48px;
+    background: var(--acb-bg);
+    color: var(--acb-text);
+}
+
+.acb-manual-container {
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+.acb-manual-title.ant-typography {
+    margin-bottom: 8px;
+    text-align: center;
+    color: var(--acb-text-strong);
+}
+
+.acb-manual-subtitle.ant-typography {
+    display: block;
+    margin-bottom: 24px;
+    text-align: center;
+    color: var(--acb-text-muted);
+}
+
+.acb-manual-card.ant-card {
+    background: #121314;
+    border-color: #2A2B2CFF;
+    border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+}
+
+.acb-manual-card .ant-card-body {
+    padding: 32px;
+}
+
+.acb-manual-loading {
+    display: flex;
+    min-height: 320px;
+    align-items: center;
+    justify-content: center;
+}
+
+.acb-manual-body {
+    color: #F0F0F0;
+}
+
+.acb-manual-line {
+    margin: 0;
+    line-height: 1.85;
+    white-space: pre-wrap;
+}
+
+.acb-manual-heading {
+    margin-top: 8px;
+    margin-bottom: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.acb-manual-space {
+    height: 14px;
+}
+
+.acb-manual-table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 18px;
+    border: 1px solid #2A2B2CFF;
+    border-radius: 10px;
+}
+
+.acb-manual-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+    color: #F0F0F0;
+    background: #191A1B;
+}
+
+.acb-manual-table th,
+.acb-manual-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #2A2B2CFF;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.acb-manual-table thead th,
+.acb-manual-table tbody th {
+    color: #FFFFFF;
+    background: #242526;
+    font-weight: 600;
+}
+
+.acb-manual-table tbody tr:last-child th,
+.acb-manual-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .acb-manual-content {
+        padding: 28px 16px;
+    }
+
+    .acb-manual-card .ant-card-body {
+        padding: 22px 16px;
+    }
+}

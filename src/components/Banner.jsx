@@ -5,7 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import { staticApi } from '../api';
-import { IS_TEST } from '../config/envConfig';
+import { IS_TEST, CURRENT_ENV, setTestVersion } from '../config/envConfig';
 
 // ───────────── 测试服:版本探测 Worker + R2 下载链接 ─────────────
 // QQ 频道（社区）入口
@@ -30,7 +30,7 @@ const buildDownloads = (version) => [
 const TestBanner = () => {
     const [bannerImages, setBannerImages] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [version, setVersion] = useState(FALLBACK_VERSION);
+    const [version, setVersion] = useState(CURRENT_ENV.version || FALLBACK_VERSION);
 
     useEffect(() => {
         const fetchImages = () => {
@@ -52,7 +52,10 @@ const TestBanner = () => {
                 const res = await fetch(VERSION_API, { cache: 'no-store' });
                 if (!res.ok) return;
                 const data = await res.json();
-                if (data && data.version) setVersion(data.version);
+                if (data && data.version) {
+                    setVersion(data.version);
+                    setTestVersion(data.version);
+                }
             } catch (error) {
                 console.error('获取最新版本失败，使用回退版本:', error);
             }

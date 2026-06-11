@@ -6,7 +6,7 @@ import {
     Row, Col, Badge, Tooltip, Modal, Progress,
 } from 'antd';
 import {
-    UserOutlined, LockOutlined, LogoutOutlined, SafetyCertificateOutlined,
+    BookOutlined, UserOutlined, LockOutlined, LogoutOutlined, SafetyCertificateOutlined,
     SettingOutlined, CloudUploadOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, DatabaseOutlined,
 } from '@ant-design/icons';
 import Header from '../components/Header';
@@ -19,6 +19,7 @@ import LoginPanel from '../components/AdminPage/LoginPanel'
 import UserRolePanel from '../components/AdminPage/UserRolePanel';
 import DamageCoefficientPanel from '../components/AdminPage/DamageCoefficientPanel';
 import ResourceInfoPanel from '../components/AdminPage/ResourceInfoPanel.jsx';
+import ManualEditorPanel from '../components/AdminPage/ManualEditorPanel.jsx';
 import ShipFormFields from '../components/AdminPage/ShipFormFields.jsx';
 import ShipDataPanel from '../components/AdminPage/ShipDataPanel.jsx';
 
@@ -121,6 +122,11 @@ const AdminPage = () => {
             key: 'resource',
             label: <Space><CloudUploadOutlined />资源信息管理</Space>,
             children: <ResourceInfoPanel token={auth?.token} />,
+        },
+        {
+            key: 'manual',
+            label: <Space><BookOutlined />玩家手册编辑</Space>,
+            children: <ManualEditorPanel token={auth?.token} />,
         },
         {
             key: 'ship-data',

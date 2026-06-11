@@ -14,7 +14,9 @@ const serverConfig = {
     fileServerBaseUrl: CURRENT_ENV.servers.file,
 
     // 当前客户端版本（登录时校验）
-    version: CURRENT_ENV.version,
+    get version() {
+        return CURRENT_ENV.version;
+    },
 };
 
 export default serverConfig;

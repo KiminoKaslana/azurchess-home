@@ -15,6 +15,30 @@ export const ENV_NAMES = {
 
 export const ENV_STORAGE_KEY = 'azurchess-server-env';
 
+let testVersion = '0.0.0.0';
+
+export const setTestVersion = (v) => {
+  testVersion = v;
+};
+
+const fetchTestVersion = async () => {
+  try {
+    const res = await fetch('https://version.azurchess.2d-gate.cc', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.version) {
+        testVersion = data.version;
+      }
+    }
+  } catch (e) {
+    console.error('获取测试服动态版本号失败:', e);
+  }
+};
+
+if (typeof window !== 'undefined') {
+  fetchTestVersion();
+}
+
 export const envProfiles = {
   [ENV_NAMES.PROD]: {
     name: ENV_NAMES.PROD,
@@ -37,7 +61,9 @@ export const envProfiles = {
     themeClassName: 'theme-dark',
     antdTheme: darkTheme,
     htmlTitle: 'Azur Chess Beta - 碧蓝战棋 测试服',
-    version: '0.27.3.14',
+    get version() {
+      return testVersion;
+    },
     servers: {
       user: isDev ? '/api/user' : 'https://user.azurchess.2d-gate.cc',
       game: isDev ? '/api/game' : 'https://game.azurchess.2d-gate.cc',
