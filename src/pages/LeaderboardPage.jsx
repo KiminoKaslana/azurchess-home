@@ -56,7 +56,7 @@ const columns = [
     { title: '排名', dataIndex: 'rank', key: 'rank', width: 80, align: 'center', render: renderRank },
     {
         title: '玩家', dataIndex: 'PlayerName', key: 'PlayerName',
-        render: (name, r) => name || <Text type="secondary">{(r.PlayerId || '').slice(-6) || '未知'}</Text>,
+        render: (name) => name || <Text type="secondary">未知</Text>,
     },
     { title: '场次', dataIndex: 'Games', key: 'Games', width: 90, align: 'right', sorter: (a, b) => a.Games - b.Games },
     { title: '胜场', dataIndex: 'Wins', key: 'Wins', width: 90, align: 'right', sorter: (a, b) => a.Wins - b.Wins },
@@ -96,8 +96,8 @@ const LeaderboardPage = () => {
                 clearAuth();
                 messageApi.warning('登录态已过期，请重新登录');
             } else {
-                // 网络或其他异常时保留本地登录态，允许继续使用
-                setAuth(saved);
+                clearAuth();
+                messageApi.warning('无法验证登录态，请重新登录');
             }
         }).finally(() => {
             setInitializing(false);
@@ -117,13 +117,13 @@ const LeaderboardPage = () => {
     }, [messageApi]);
 
     const fetchLeaderboard = useCallback(async (opts = {}) => {
-        if (!auth?.playerID) return;
+        if (!auth?.token) return;
         const sb = opts.sortBy ?? sortBy;
         setLoading(true);
         try {
             const res = await gameApi.getLeaderboard(
                 { SortBy: sb, MinGames: MIN_GAMES, Limit: RESULT_LIMIT },
-                auth.playerID,
+                auth.token,
             );
             const entries = res.data?.Entries ?? [];
             setRows(entries.map((e, i) => ({ ...e, rank: i + 1 })));
@@ -143,7 +143,7 @@ const LeaderboardPage = () => {
 
     // 登录后首次加载
     useEffect(() => {
-        if (auth?.playerID) {
+        if (auth?.token) {
             fetchLeaderboard();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,7 +218,7 @@ const LeaderboardPage = () => {
                                 </Col>
                             </Row>
                             <Table
-                                rowKey={(r) => r.PlayerId || String(r.rank)}
+                                rowKey={(r) => String(r.rank)}
                                 columns={columns}
                                 dataSource={rows}
                                 loading={loading}
