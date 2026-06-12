@@ -13,14 +13,14 @@ const AppHeader = () => {
 
   return (
     <Header className="custom-header">
-      <a className="header-left" href='#home'>
+      <Link className="header-left" to="/">
         <div className="logo-icon">
           <img src="logo.png" alt="Game Logo" />
         </div>
         <Title level={4} className="game-title">
           {IS_TEST ? 'AZUR CHESS BETA' : 'AZUR CHESS'}
         </Title>
-      </a>
+      </Link>
 
       <div className="header-right">
         {/* 导航菜单 */}
