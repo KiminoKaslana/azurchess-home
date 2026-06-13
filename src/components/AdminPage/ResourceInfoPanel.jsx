@@ -1,39 +1,97 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Layout, Card, Form, Input, Button, Select, Tabs, Typography,
-    Tag, Space, Divider, InputNumber, Table, Upload, Alert, App as AntdApp,
-    Row, Col, Badge, Tooltip, Modal, Progress,
+    Card, Input, Button, Typography, Select,
+    Space, Upload, Alert, App as AntdApp, Table, Tag,
+    Progress,
 } from 'antd';
 import {
-    UserOutlined, LockOutlined, LogoutOutlined, SafetyCertificateOutlined,
-    SettingOutlined, CloudUploadOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, DatabaseOutlined,
+    CloudUploadOutlined, ReloadOutlined, InboxOutlined, DeleteOutlined,
 } from '@ant-design/icons';
-import Header from '../Header';
-import Footer from '../Footer';
-import { authApi, gameApi, staticApi, userApi } from '../../api';
-import { fileApiClient } from '../../api/client';
+import { gameApi } from '../../api';
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const { Text } = Typography;
+const { Dragger } = Upload;
 
-const createEmptyResource = () => ({
-    key: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    Name: '',
-    Hash: '',
-    URL: '',
-    SubDirectory: '',
-});
+const bufferToHex = (buffer) => Array.from(new Uint8Array(buffer))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+
+const calculateFileSHA1 = async (file) => {
+    if (!window.crypto?.subtle) {
+        throw new Error('当前浏览器不支持 Web Crypto，无法计算 SHA1');
+    }
+
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await window.crypto.subtle.digest('SHA-1', buffer);
+    return bufferToHex(hashBuffer);
+};
+
+const getPlatformPrefix = (platform) => platform || 'Windows';
+
+const getUrlPrefixPath = (url) => {
+    try {
+        const pathname = new URL(url).pathname;
+        const parts = pathname.split('/').filter(Boolean);
+        return parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+    } catch {
+        return '';
+    }
+};
+
+const getPrefixRoot = (prefix = '') => prefix.split('/').filter(Boolean)[0] || '';
+
+const getPlatformFromPrefix = (prefix) => {
+    const root = getPrefixRoot(prefix);
+    return root === 'Common' ? '' : root;
+};
+
+const formatLastModified = (value) => {
+    if (!value) {
+        return '-';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleString(undefined, { hour12: false });
+};
+
+const getUploadTarget = (fileName, platform, resources) => {
+    const existing = resources.find(resource => resource.Name === fileName);
+    const existingPrefix = existing?.URL ? getUrlPrefixPath(existing.URL) : '';
+
+    if (existingPrefix) {
+        return {
+            ossPrefix: existingPrefix,
+            platform: getPlatformFromPrefix(existingPrefix),
+            isExisting: true,
+            existingURL: existing.URL,
+        };
+    }
+
+    return {
+        ossPrefix: '',
+        platform: '',
+        isExisting: false,
+        suggestedPrefix: getPlatformPrefix(platform),
+    };
+};
 
 // ────────────────────────────────────────────────
 // 子组件：资源信息管理
 // ────────────────────────────────────────────────
 const ResourceInfoPanel = ({ token }) => {
     const { message: messageApi } = AntdApp.useApp();
-    const [resources, setResources] = useState([createEmptyResource()]);
+    const [resources, setResources] = useState([]);
     const [platform, setPlatform] = useState('');
-    const [loading, setLoading] = useState(false);
     const [fetchLoading, setFetchLoading] = useState(false);
-    const [regenLoading, setRegenLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [uploadPercent, setUploadPercent] = useState(0);
+    const [uploadPhase, setUploadPhase] = useState('');
+    const [lastUploaded, setLastUploaded] = useState(null);
+    const [uploadQueue, setUploadQueue] = useState([]);
 
     const mapResourceRow = useCallback((resource) => ({
         key: `${resource.Name || 'resource'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -41,15 +99,24 @@ const ResourceInfoPanel = ({ token }) => {
         Hash: resource.Hash || '',
         URL: resource.URL || '',
         SubDirectory: resource.SubDirectory || '',
+        LastModified: resource.LastModified || '',
     }), []);
 
     const loadResources = useCallback(async (targetPlatform = '', options = {}) => {
         const { silent = false } = options;
         setFetchLoading(true);
         try {
-            const res = await gameApi.getResourceInfo(targetPlatform);
+            const [res, metadataRes] = await Promise.all([
+                gameApi.getResourceInfo(targetPlatform),
+                token ? gameApi.getResourceInfoMetadata(targetPlatform, token).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+            ]);
             const list = Array.isArray(res.data) ? res.data : [];
-            setResources(list.length > 0 ? list.map(mapResourceRow) : [createEmptyResource()]);
+            const metadataList = Array.isArray(metadataRes.data) ? metadataRes.data : [];
+            const metadataMap = new Map(metadataList.map(item => [`${item.Name}|${item.URL}`, item]));
+            setResources(list.map(resource => mapResourceRow({
+                ...resource,
+                LastModified: metadataMap.get(`${resource.Name}|${resource.URL}`)?.LastModified,
+            })));
             if (!silent) {
                 messageApi.success(`已加载 ${list.length} 条资源信息`);
             }
@@ -61,53 +128,219 @@ const ResourceInfoPanel = ({ token }) => {
         } finally {
             setFetchLoading(false);
         }
-    }, [mapResourceRow, messageApi]);
+    }, [mapResourceRow, messageApi, token]);
 
     useEffect(() => {
         loadResources('', { silent: true });
     }, [loadResources]);
 
-    const addRow = () => {
-        setResources(prev => [...prev, createEmptyResource()]);
+    const handlePlatformChange = (value) => {
+        setPlatform(value);
+        loadResources(value);
     };
 
-    const removeRow = (key) => {
-        setResources(prev => prev.filter(r => r.key !== key));
+    const updateQueuedFile = (key, patch) => {
+        setUploadQueue(prev => prev.map(item => item.key === key ? { ...item, ...patch } : item));
     };
 
-    const updateRow = (key, field, value) => {
-        setResources(prev => prev.map(r => r.key === key ? { ...r, [field]: value } : r));
+    const removeQueuedFile = (key) => {
+        setUploadQueue(prev => prev.filter(item => item.key !== key));
     };
 
-    const handleUpdateResource = async () => {
-        const sanitizedResources = resources.map(({ Name, Hash, URL, SubDirectory }) => ({
-            Name: Name.trim(),
-            Hash: Hash.trim(),
-            URL: URL.trim(),
-            SubDirectory: SubDirectory.trim(),
-        }));
-        const invalid = sanitizedResources.find(r => !r.Name || !r.Hash || !r.URL || !r.SubDirectory);
-        if (invalid) {
-            messageApi.warning('每条资源信息的 Name、Hash、URL、SubDirectory 均不能为空');
+    const handleStageResourceFile = async ({ file, onSuccess, onError }) => {
+        const uploadTarget = getUploadTarget(file.name, platform, resources);
+        const key = `${file.name}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const queuedFile = {
+            key,
+            file,
+            Name: file.name,
+            Hash: '',
+            ossPrefix: uploadTarget.ossPrefix,
+            platform: uploadTarget.platform,
+            isExisting: uploadTarget.isExisting,
+            existingURL: uploadTarget.existingURL,
+            suggestedPrefix: uploadTarget.suggestedPrefix,
+            status: 'hashing',
+            percent: 0,
+            error: '',
+        };
+
+        setUploadQueue(prev => [...prev.filter(item => item.Name !== file.name), queuedFile]);
+
+        try {
+            const hash = await calculateFileSHA1(file);
+            updateQueuedFile(key, { Hash: hash, status: 'pending' });
+            if (!uploadTarget.isExisting) {
+                messageApi.warning(`检测到新文件 ${file.name}，请确认名称没有拼写错误并填写 OSS Prefix`);
+            }
+            onSuccess?.({ staged: true });
+        } catch (err) {
+            updateQueuedFile(key, { status: 'error', error: err.message || 'SHA1 计算失败' });
+            onError?.(err);
+        }
+    };
+
+    const validateQueueItem = (item) => {
+        const prefix = (item.ossPrefix || '').trim().replace(/^\/+|\/+$/g, '');
+        const root = getPrefixRoot(prefix);
+        if (!prefix) {
+            return { valid: false, message: `${item.Name} 缺少 OSS Prefix` };
+        }
+        if (!['Common', 'Windows', 'Android', 'iOS'].includes(root)) {
+            return { valid: false, message: `${item.Name} 的 OSS Prefix 必须以 Common、Windows、Android 或 iOS 开头` };
+        }
+        return {
+            valid: true,
+            ossPrefix: prefix,
+            platform: getPlatformFromPrefix(prefix),
+        };
+    };
+
+    const handleUploadQueue = async () => {
+        if (!token) {
+            messageApi.error('请先登录 Admin 账号');
             return;
         }
-        const toastKey = 'resource-info-update';
-        messageApi.loading({ content: '正在提交资源信息更新...', key: toastKey, duration: 0 });
-        setLoading(true);
+
+        const pendingItems = uploadQueue.filter(item => item.status === 'pending' || item.status === 'error');
+        if (pendingItems.length === 0) {
+            messageApi.info('上传队列为空');
+            return;
+        }
+
+        for (const item of pendingItems) {
+            const validation = validateQueueItem(item);
+            if (!validation.valid) {
+                messageApi.warning(validation.message);
+                return;
+            }
+        }
+
+        const toastKey = 'resource-file-upload';
+        setUploading(true);
+        setUploadPercent(0);
+        setLastUploaded(null);
+        messageApi.loading({ content: '正在上传资源队列...', key: toastKey, duration: 0 });
+
         try {
-            const res = await gameApi.updateResourceInfo(sanitizedResources, token, platform);
-            messageApi.success({ content: res.data || '资源信息更新已完成', key: toastKey });
+            for (let index = 0; index < pendingItems.length; index += 1) {
+                const item = pendingItems[index];
+                const validation = validateQueueItem(item);
+                const basePercent = Math.round((index / pendingItems.length) * 100);
+                setUploadPhase(`正在上传 ${item.Name} (${index + 1}/${pendingItems.length})`);
+                updateQueuedFile(item.key, { status: 'uploading', percent: 0, error: '' });
+
+                const res = await gameApi.uploadResourceFile(
+                    item.file,
+                    {
+                        resourceName: item.Name,
+                        hash: item.Hash,
+                        ossPrefix: validation.ossPrefix,
+                        platform: validation.platform,
+                    },
+                    token,
+                    event => {
+                        if (!event.total) return;
+                        const itemPercent = Math.round((event.loaded / event.total) * 100);
+                        const totalPercent = Math.round(((index + itemPercent / 100) / pendingItems.length) * 100);
+                        setUploadPercent(Math.max(basePercent, totalPercent));
+                        updateQueuedFile(item.key, { percent: itemPercent });
+                    }
+                );
+
+                updateQueuedFile(item.key, { status: 'done', percent: 100 });
+                setLastUploaded(res.data || { Name: item.Name, Hash: item.Hash });
+            }
+
+            setUploadPhase('上传完成，正在刷新资源列表...');
             await loadResources(platform, { silent: true });
+            messageApi.success({ content: '资源队列上传完成', key: toastKey });
         } catch (err) {
-            const status = err.response?.status;
-            const msg = err.response?.data;
-            if (status === 400) messageApi.error({ content: msg || '资源项缺少必要字段', key: toastKey });
-            else if (status === 401 || status === 403) messageApi.error({ content: '权限不足或 Token 无效', key: toastKey });
-            else messageApi.error({ content: '服务器异常', key: toastKey });
+            const msg = err.response?.data?.Message || err.response?.data || err.message || '资源包上传失败';
+            const currentName = uploadPhase.match(/正在上传 (.+) \(/)?.[1];
+            if (currentName) {
+                setUploadQueue(prev => prev.map(item => item.Name === currentName ? { ...item, status: 'error', error: msg } : item));
+            }
+            messageApi.error({ content: msg, key: toastKey });
         } finally {
-            setLoading(false);
+            setUploading(false);
+            setUploadPhase('');
         }
     };
+
+    const resourceColumns = [
+        { title: '#', width: 56, render: (_, __, idx) => idx + 1 },
+        { title: 'Name', dataIndex: 'Name', width: 180 },
+        { title: 'Hash', dataIndex: 'Hash', render: value => <Text code copyable>{value}</Text> },
+        { title: 'URL', dataIndex: 'URL', render: value => <Text copyable ellipsis style={{ maxWidth: 420 }}>{value}</Text> },
+        { title: 'SubDirectory', dataIndex: 'SubDirectory', width: 150 },
+        {
+            title: 'Last Modified',
+            dataIndex: 'LastModified',
+            width: 190,
+            render: value => <Text>{formatLastModified(value)}</Text>,
+        },
+    ];
+
+    const queueColumns = [
+        {
+            title: '文件',
+            dataIndex: 'Name',
+            width: 180,
+            render: (_, record) => (
+                <Space direction="vertical" size={0}>
+                    <Text>{record.Name}</Text>
+                    {!record.isExisting && <Tag color="warning">新文件，请确认名称无误</Tag>}
+                </Space>
+            ),
+        },
+        {
+            title: 'OSS Prefix',
+            width: 260,
+            render: (_, record) => record.isExisting ? (
+                <Space direction="vertical" size={0}>
+                    <Text code>{record.ossPrefix}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>沿用同名资源路径</Text>
+                </Space>
+            ) : (
+                <Input
+                    value={record.ossPrefix}
+                    placeholder={`如 Common 或 ${record.suggestedPrefix}`}
+                    disabled={uploading}
+                    onChange={e => updateQueuedFile(record.key, { ossPrefix: e.target.value })}
+                />
+            ),
+        },
+        { title: 'SHA1', dataIndex: 'Hash', render: value => value ? <Text code copyable>{value}</Text> : <Text type="secondary">计算中...</Text> },
+        {
+            title: '状态',
+            width: 150,
+            render: (_, record) => {
+                const statusMap = {
+                    hashing: ['processing', '计算 SHA1'],
+                    pending: ['default', '待上传'],
+                    uploading: ['processing', `上传中 ${record.percent || 0}%`],
+                    done: ['success', '已上传'],
+                    error: ['error', record.error || '失败'],
+                };
+                const [color, text] = statusMap[record.status] || ['default', record.status];
+                return <Tag color={color}>{text}</Tag>;
+            },
+        },
+        {
+            title: '操作',
+            width: 90,
+            render: (_, record) => (
+                <Button
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    disabled={uploading || record.status === 'uploading'}
+                    onClick={() => removeQueuedFile(record.key)}
+                />
+            ),
+        },
+    ];
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
@@ -116,13 +349,16 @@ const ResourceInfoPanel = ({ token }) => {
                 title="更新资源信息"
                 extra={
                     <Space>
-                        <Text type="secondary">Platform（可选）：</Text>
-                        <Input
-                            placeholder="如 Android"
+                        <Text type="secondary">Platform：</Text>
+                        <Select
                             value={platform}
-                            onChange={e => setPlatform(e.target.value)}
+                            onChange={handlePlatformChange}
                             style={{ width: 130 }}
-                            allowClear
+                            options={[
+                                { value: '', label: 'Windows' },
+                                { value: 'Android', label: 'Android' },
+                                { value: 'iOS', label: 'iOS' },
+                            ]}
                         />
                         <Button
                             icon={<ReloadOutlined />}
@@ -141,59 +377,90 @@ const ResourceInfoPanel = ({ token }) => {
                     style={{ marginBottom: 12 }}
                 />
 
-                {resources.map((row, idx) => (
-                    <Row key={row.key} gutter={8} style={{ marginBottom: 8 }} align="middle">
-                        <Col span={1}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>{idx + 1}</Text>
-                        </Col>
-                        <Col span={4}>
-                            <Input
-                                placeholder="Name（Bundle名）"
-                                value={row.Name}
-                                onChange={e => updateRow(row.key, 'Name', e.target.value)}
+                <Card
+                    size="small"
+                    title="拖拽上传资源包"
+                    style={{ marginBottom: 16 }}
+                >
+                    <Alert
+                        message="拖拽文件后会先暂存到上传队列。已有同名资源会自动匹配 OSS Prefix；新文件确认名称无误，并手动填写 OSS Prefix。"
+                        type="info"
+                        showIcon
+                        style={{ marginBottom: 12 }}
+                    />
+                    <Dragger
+                        multiple
+                        showUploadList={false}
+                        customRequest={handleStageResourceFile}
+                        disabled={uploading}
+                    >
+                        <p className="ant-upload-drag-icon">
+                            <InboxOutlined />
+                        </p>
+                        <p className="ant-upload-text">点击或拖拽资源包到此处加入队列</p>
+                        <p className="ant-upload-hint">
+                            Common 资源会同步三平台清单；平台资源只更新当前选择的平台清单。
+                        </p>
+                    </Dragger>
+                    {uploadQueue.length > 0 && (
+                        <Space direction="vertical" style={{ width: '100%', marginTop: 12 }}>
+                            <Table
+                                size="small"
+                                rowKey="key"
+                                dataSource={uploadQueue}
+                                columns={queueColumns}
+                                pagination={false}
+                                scroll={{ x: 980 }}
                             />
-                        </Col>
-                        <Col span={5}>
-                            <Input
-                                placeholder="Hash（如 abcdef1234）"
-                                value={row.Hash}
-                                onChange={e => updateRow(row.key, 'Hash', e.target.value)}
-                            />
-                        </Col>
-                        <Col span={7}>
-                            <Input
-                                placeholder="URL（完整下载地址）"
-                                value={row.URL}
-                                onChange={e => updateRow(row.key, 'URL', e.target.value)}
-                            />
-                        </Col>
-                        <Col span={5}>
-                            <Input
-                                placeholder="SubDirectory（如 AssetBundles）"
-                                value={row.SubDirectory}
-                                onChange={e => updateRow(row.key, 'SubDirectory', e.target.value)}
-                            />
-                        </Col>
-                        <Col span={2}>
-                            <Tooltip title="删除此行">
+                            <Space>
                                 <Button
-                                    danger
-                                    size="small"
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => removeRow(row.key)}
-                                    disabled={resources.length === 1}
-                                />
-                            </Tooltip>
-                        </Col>
-                    </Row>
-                ))}
+                                    type="primary"
+                                    icon={<CloudUploadOutlined />}
+                                    loading={uploading}
+                                    onClick={handleUploadQueue}
+                                >
+                                    上传队列
+                                </Button>
+                                <Button
+                                    disabled={uploading}
+                                    onClick={() => setUploadQueue([])}
+                                >
+                                    清空队列
+                                </Button>
+                            </Space>
+                        </Space>
+                    )}
+                    {uploading && (
+                        <Space direction="vertical" style={{ width: '100%', marginTop: 12 }}>
+                            <Text type="secondary">{uploadPhase}</Text>
+                            <Progress percent={uploadPercent} status="active" />
+                        </Space>
+                    )}
+                    {lastUploaded && !uploading && (
+                        <Alert
+                            type="success"
+                            showIcon
+                            style={{ marginTop: 12 }}
+                            message={`最近上传：${lastUploaded.Name || lastUploaded.name || '资源包'}`}
+                            description={
+                                <Space direction="vertical" size={0}>
+                                    <Text code>{lastUploaded.Hash || lastUploaded.hash}</Text>
+                                    {lastUploaded.URL && <Text copyable>{lastUploaded.URL}</Text>}
+                                </Space>
+                            }
+                        />
+                    )}
+                </Card>
 
-                <Space style={{ marginTop: 8 }}>
-                    <Button icon={<PlusOutlined />} onClick={addRow}>添加一行</Button>
-                    <Button type="primary" loading={loading} icon={<CloudUploadOutlined />} onClick={handleUpdateResource}>
-                        提交资源列表
-                    </Button>
-                </Space>
+                <Table
+                    size="small"
+                    rowKey="key"
+                    dataSource={resources}
+                    columns={resourceColumns}
+                    pagination={false}
+                    scroll={{ x: 1000 }}
+                    locale={{ emptyText: '当前平台暂无资源信息' }}
+                />
             </Card>
         </Space>
     );

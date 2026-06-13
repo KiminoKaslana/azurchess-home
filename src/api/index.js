@@ -19,6 +19,8 @@ const buildOptionalHeaders = (headers = {}) => {
     return Object.keys(sanitized).length > 0 ? { headers: sanitized } : undefined;
 };
 
+const encodeHeaderValue = (value = '') => encodeURIComponent(value);
+
 export const authApi = {
     login(username, password) {
         return userApiClient.post('/Login', {
@@ -60,8 +62,18 @@ export const gameApi = {
     },
 
     getResourceInfo(platform) {
-        const config = buildOptionalHeaders({ Platform: platform });
+        const config = buildOptionalHeaders({ OS: platform });
         return gameApiClient.post('/GetResourceInfo', null, config);
+    },
+
+    getResourceInfoMetadata(platform, token) {
+        return gameApiClient.post(
+            '/GetResourceInfoMetadata',
+            null,
+            withToken(token, {
+                ...(platform ? { OS: platform } : {}),
+            })
+        );
     },
 
     updateResourceInfo(resources, token, platform) {
@@ -73,6 +85,26 @@ export const gameApi = {
                 ...(platform ? { Platform: platform } : {}),
             })
         );
+    },
+
+    uploadResourceFile(file, metadata, token, onUploadProgress) {
+        const resourceName = metadata.resourceName || file.name;
+        const ossPrefix = metadata.ossPrefix || 'Common';
+
+        return gameApiClient.post('/UploadResourceFile', file, {
+            headers: {
+                Token: token,
+                'Content-Type': 'application/octet-stream',
+                'Resource-Name': encodeHeaderValue(resourceName),
+                'Resource-Hash': metadata.hash,
+                'OSS-Prefix': encodeHeaderValue(ossPrefix),
+                ...(metadata.platform ? { 'Resource-Platform': metadata.platform } : {}),
+            },
+            timeout: 10 * 60 * 1000,
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+            onUploadProgress,
+        });
     },
 
     regenerateResourceInfo(token) {
