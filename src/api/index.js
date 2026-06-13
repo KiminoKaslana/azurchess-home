@@ -84,6 +84,23 @@ export const gameApi = {
     getLeaderboard(query, token) {
         return gameApiClient.post('/GetLeaderboard', query, withToken(token));
     },
+
+    getReplayList(query = {}, auth = {}) {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(auth.token ? { Token: auth.token } : {}),
+            ...(auth.playerID ? { PlayerID: auth.playerID } : {}),
+        };
+        return gameApiClient.post('/GetReplayList', query, { headers });
+    },
+
+    getMatchLog(replayId, token) {
+        return gameApiClient.post(
+            '/GetMatchLog',
+            { ReplayId: replayId },
+            withToken(token, { 'Content-Type': 'application/json' })
+        );
+    },
 };
 
 export const staticApi = {

@@ -8,6 +8,7 @@ import {
 import {
     BookOutlined, UserOutlined, LockOutlined, LogoutOutlined, SafetyCertificateOutlined,
     SettingOutlined, CloudUploadOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, DatabaseOutlined,
+    FileTextOutlined,
 } from '@ant-design/icons';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -22,6 +23,7 @@ import ResourceInfoPanel from '../components/AdminPage/ResourceInfoPanel.jsx';
 import ManualEditorPanel from '../components/AdminPage/ManualEditorPanel.jsx';
 import ShipFormFields from '../components/AdminPage/ShipFormFields.jsx';
 import ShipDataPanel from '../components/AdminPage/ShipDataPanel.jsx';
+import MatchRecordPanel from '../components/AdminPage/MatchRecordPanel.jsx';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -122,6 +124,11 @@ const AdminPage = () => {
             key: 'resource',
             label: <Space><CloudUploadOutlined />资源信息管理</Space>,
             children: <ResourceInfoPanel token={auth?.token} />,
+        },
+        {
+            key: 'match-record',
+            label: <Space><FileTextOutlined />对局记录查询</Space>,
+            children: <MatchRecordPanel token={auth?.token} playerID={auth?.playerID} />,
         },
         {
             key: 'manual',
