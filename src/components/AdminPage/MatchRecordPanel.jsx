@@ -1,15 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert, App as AntdApp, Button, Card, Descriptions, Empty, Modal,
+    Alert, App as AntdApp, Button, Card, DatePicker, Descriptions, Empty, Modal,
     Space, Table, Tag, Typography,
 } from 'antd';
 import { FileTextOutlined, ReloadOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { gameApi } from '../../api';
 
+dayjs.extend(utc);
+
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const DOTNET_EPOCH_TICKS = 621355968000000000;
 const TICKS_PER_MILLISECOND = 10000;
+const DEFAULT_PAGE_SIZE = 25;
+
+const dayjsToTicks = (value, endOfDay = false) => {
+    if (!value) return undefined;
+    const date = endOfDay ? value.utc().endOf('day') : value.utc().startOf('day');
+    const milliseconds = date.valueOf();
+    return milliseconds * TICKS_PER_MILLISECOND + DOTNET_EPOCH_TICKS;
+};
 
 const formatDateTime = (ticks) => {
     const value = Number(ticks);
@@ -114,17 +127,41 @@ const MatchRecordPanel = ({ token, playerID }) => {
     const [logModalOpen, setLogModalOpen] = useState(false);
     const [logTitle, setLogTitle] = useState('');
     const [logText, setLogText] = useState('');
+    const [dateRange, setDateRange] = useState(null);
+    const [pagination, setPagination] = useState({
+        current: 1,
+        pageSize: DEFAULT_PAGE_SIZE,
+    });
+
+    const buildQuery = useCallback((overrides = {}) => {
+        const current = overrides.current ?? pagination.current;
+        const pageSize = overrides.pageSize ?? pagination.pageSize;
+        const range = overrides.dateRange ?? dateRange;
+
+        const query = {
+            Limit: pageSize,
+            Skip: (current - 1) * pageSize,
+        };
+
+        if (range?.[0]) {
+            query.DateFromTicks = dayjsToTicks(range[0], false);
+        }
+        if (range?.[1]) {
+            query.DateToTicks = dayjsToTicks(range[1], true);
+        }
+
+        return query;
+    }, [dateRange, pagination.current, pagination.pageSize]);
 
     const loadRecords = useCallback(async (options = {}) => {
-        const { silent = false } = options;
+        const { silent = false, queryOverrides = {} } = options;
         setLoading(true);
         try {
-            const res = await gameApi.getReplayList({ Limit: 0 }, { token, playerID });
+            const res = await gameApi.getReplayList(buildQuery(queryOverrides), { token, playerID });
             const list = Array.isArray(res.data?.Replays) ? res.data.Replays : [];
-            const sorted = [...list].sort((a, b) => Number(b.StartTime || 0) - Number(a.StartTime || 0));
-            setRecords(sorted);
+            setRecords(list);
             if (!silent) {
-                messageApi.success(`已加载 ${sorted.length} 条对局记录`);
+                messageApi.success(`已加载 ${list.length} 条对局记录`);
             }
         } catch (err) {
             const status = err.response?.status;
@@ -133,7 +170,7 @@ const MatchRecordPanel = ({ token, playerID }) => {
         } finally {
             setLoading(false);
         }
-    }, [messageApi, playerID, token]);
+    }, [buildQuery, messageApi, playerID, token]);
 
     useEffect(() => {
         loadRecords({ silent: true });
@@ -171,25 +208,25 @@ const MatchRecordPanel = ({ token, playerID }) => {
             dataIndex: 'StartTime',
             key: 'StartTime',
             render: formatDateTime,
-            sorter: (a, b) => Number(a.StartTime || 0) - Number(b.StartTime || 0),
-            defaultSortOrder: 'descend',
         },
         {
             title: '持续时间',
             dataIndex: 'DurationSeconds',
             key: 'DurationSeconds',
             render: formatDuration,
-            sorter: (a, b) => Number(a.DurationSeconds || 0) - Number(b.DurationSeconds || 0),
         },
         {
             title: '对局人数',
             dataIndex: 'PlayerCount',
             key: 'PlayerCount',
             width: 120,
-            sorter: (a, b) => Number(a.PlayerCount || 0) - Number(b.PlayerCount || 0),
             render: value => `${value || 0} 人`,
         },
     ], []);
+
+    const estimatedTotal = records.length < pagination.pageSize
+        ? (pagination.current - 1) * pagination.pageSize + records.length
+        : pagination.current * pagination.pageSize + 1;
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
@@ -202,17 +239,47 @@ const MatchRecordPanel = ({ token, playerID }) => {
                 }
             >
                 <Alert
-                    message="点击任意对局行可展开详细信息；日志内容仅 Admin 及以上权限可查看。"
+                    message="默认加载最近 25 条对局；可按结束日期筛选并翻页查看更多。点击任意对局行可展开详细信息；日志内容仅 Admin 及以上权限可查看。"
                     type="info"
                     showIcon
                     style={{ marginBottom: 12 }}
                 />
+                <Space wrap style={{ marginBottom: 12 }}>
+                    <RangePicker
+                        value={dateRange}
+                        onChange={(value) => {
+                            setDateRange(value);
+                            setPagination(prev => ({ ...prev, current: 1 }));
+                        }}
+                        allowClear
+                        placeholder={['结束日期起', '结束日期止']}
+                    />
+                    <Button
+                        type="primary"
+                        loading={loading}
+                        onClick={() => {
+                            setPagination(prev => ({ ...prev, current: 1 }));
+                            loadRecords({ queryOverrides: { current: 1 } });
+                        }}
+                    >
+                        查询
+                    </Button>
+                </Space>
                 <Table
                     rowKey="ReplayId"
                     loading={loading}
                     columns={columns}
                     dataSource={records}
-                    pagination={{ pageSize: 20, showSizeChanger: true }}
+                    pagination={{
+                        current: pagination.current,
+                        pageSize: pagination.pageSize,
+                        total: estimatedTotal,
+                        showSizeChanger: true,
+                        pageSizeOptions: ['25', '50', '100', '200'],
+                        onChange: (current, pageSize) => {
+                            setPagination({ current, pageSize });
+                        },
+                    }}
                     expandable={{
                         expandedRowRender: record => (
                             <MatchDetails
