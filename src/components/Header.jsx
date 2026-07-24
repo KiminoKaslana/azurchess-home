@@ -1,6 +1,6 @@
 // src/components/Header.jsx
 import { Link, useLocation } from 'react-router-dom';
-import { BookOutlined, HomeOutlined, ProfileOutlined, SettingOutlined, SwapOutlined, TrophyOutlined } from '@ant-design/icons';
+import { AreaChartOutlined, BookOutlined, HomeOutlined, ProfileOutlined, SettingOutlined, SwapOutlined, TrophyOutlined } from '@ant-design/icons';
 import { Button, Menu, Layout, Typography } from 'antd';
 import './Header.css'; // 用于自定义样式
 import { IS_TEST, OTHER_ENV, toggleEnv } from '../config/envConfig';
@@ -40,6 +40,9 @@ const AppHeader = () => {
           </Menu.Item>
           <Menu.Item key="/leaderboard" icon={<TrophyOutlined />} className="menu-item">
             <Link to="/leaderboard">排行榜</Link>
+          </Menu.Item>
+          <Menu.Item key="/report" icon={<AreaChartOutlined />} className="menu-item">
+            <Link to="/report">活跃回顾</Link>
           </Menu.Item>
           <Menu.Item key="/admin" icon={<SettingOutlined />} className="menu-item">
             <Link to="/admin">管理</Link>

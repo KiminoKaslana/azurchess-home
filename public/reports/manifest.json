@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-07-08 15:56",
+  "months": [
+    {
+      "key": "2026-04",
+      "label": "4月",
+      "title": "2026.04",
+      "start": "2026-04-09",
+      "end": "2026-04-30",
+      "total_games": 10,
+      "total_players": 19,
+      "total_player_hours": 66.4
+    },
+    {
+      "key": "2026-05",
+      "label": "5月",
+      "title": "2026.05",
+      "start": "2026-05-01",
+      "end": "2026-05-31",
+      "total_games": 313,
+      "total_players": 68,
+      "total_player_hours": 610.1
+    },
+    {
+      "key": "2026-06",
+      "label": "6月",
+      "title": "2026.06",
+      "start": "2026-06-01",
+      "end": "2026-06-30",
+      "total_games": 859,
+      "total_players": 155,
+      "total_player_hours": 1659.6
+    }
+  ]
+}
