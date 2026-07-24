@@ -58,6 +58,14 @@ const formatLastModified = (value) => {
     return date.toLocaleString(undefined, { hour12: false });
 };
 
+// 需要过滤的文件后缀（Unity 生成的 .meta / .manifest 清单文件不参与资源上传）
+const FILTERED_UPLOAD_EXTENSIONS = ['.meta.manifest', '.manifest', '.meta'];
+
+const isFilteredUploadFile = (fileName = '') => {
+    const lower = fileName.toLowerCase();
+    return FILTERED_UPLOAD_EXTENSIONS.some(ext => lower.endsWith(ext));
+};
+
 const getUploadTarget = (fileName, platform, resources) => {
     const existing = resources.find(resource => resource.Name === fileName);
     const existingPrefix = existing?.URL ? getUrlPrefixPath(existing.URL) : '';
@@ -68,6 +76,7 @@ const getUploadTarget = (fileName, platform, resources) => {
             platform: getPlatformFromPrefix(existingPrefix),
             isExisting: true,
             existingURL: existing.URL,
+            existingHash: existing.Hash || '',
         };
     }
 
@@ -169,6 +178,13 @@ const ResourceInfoPanel = ({ token }) => {
 
         try {
             const hash = await calculateFileSHA1(file);
+            if (uploadTarget.isExisting && uploadTarget.existingHash
+                && hash.toLowerCase() === uploadTarget.existingHash.toLowerCase()) {
+                updateQueuedFile(key, { Hash: hash, status: 'duplicate', error: '此文件与旧文件哈希一致，取消上传' });
+                onSuccess?.({ staged: true });
+                setTimeout(() => removeQueuedFile(key), 5000);
+                return;
+            }
             updateQueuedFile(key, { Hash: hash, status: 'pending' });
             if (!uploadTarget.isExisting) {
                 messageApi.warning(`检测到新文件 ${file.name}，请确认名称没有拼写错误并填写 OSS Prefix`);
@@ -186,8 +202,8 @@ const ResourceInfoPanel = ({ token }) => {
         if (!prefix) {
             return { valid: false, message: `${item.Name} 缺少 OSS Prefix` };
         }
-        if (!['Common', 'Windows', 'Android', 'iOS'].includes(root)) {
-            return { valid: false, message: `${item.Name} 的 OSS Prefix 必须以 Common、Windows、Android 或 iOS 开头` };
+        if (!['Common', 'Windows', 'Android', 'iOS', 'macOS'].includes(root)) {
+            return { valid: false, message: `${item.Name} 的 OSS Prefix 必须以 Common、Windows、Android、iOS 或 macOS 开头` };
         }
         return {
             valid: true,
@@ -321,10 +337,11 @@ const ResourceInfoPanel = ({ token }) => {
                     pending: ['default', '待上传'],
                     uploading: ['processing', `上传中 ${record.percent || 0}%`],
                     done: ['success', '已上传'],
+                    duplicate: ['warning', record.error || '此文件与旧文件哈希一致，取消上传'],
                     error: ['error', record.error || '失败'],
                 };
                 const [color, text] = statusMap[record.status] || ['default', record.status];
-                return <Tag color={color}>{text}</Tag>;
+                return <Tag color={color} style={{ whiteSpace: 'normal' }}>{text}</Tag>;
             },
         },
         {
@@ -358,6 +375,7 @@ const ResourceInfoPanel = ({ token }) => {
                                 { value: '', label: 'Windows' },
                                 { value: 'Android', label: 'Android' },
                                 { value: 'iOS', label: 'iOS' },
+                                { value: 'macOS', label: 'macOS' },
                             ]}
                         />
                         <Button
@@ -391,6 +409,7 @@ const ResourceInfoPanel = ({ token }) => {
                     <Dragger
                         multiple
                         showUploadList={false}
+                        beforeUpload={file => (isFilteredUploadFile(file.name) ? Upload.LIST_IGNORE : true)}
                         customRequest={handleStageResourceFile}
                         disabled={uploading}
                     >
