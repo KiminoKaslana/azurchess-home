@@ -1,19 +1,18 @@
 // src/pages/AdminPage.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Layout, Card, Form, Input, Button, Select, Tabs, Typography,
-    Tag, Space, Divider, InputNumber, Table, Upload, Alert, App as AntdApp,
-    Row, Col, Badge, Tooltip, Modal, Progress,
+    Layout, Card, Button, Tabs, Typography,
+    Space, Divider, App as AntdApp,
+    Row, Col, Badge,
 } from 'antd';
 import {
-    BookOutlined, UserOutlined, LockOutlined, LogoutOutlined, SafetyCertificateOutlined,
-    SettingOutlined, CloudUploadOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, DatabaseOutlined,
+    BookOutlined, LogoutOutlined, SafetyCertificateOutlined,
+    SettingOutlined, CloudUploadOutlined, DatabaseOutlined,
     FileTextOutlined,
 } from '@ant-design/icons';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { authApi, gameApi, staticApi, userApi } from '../api';
-import { fileApiClient } from '../api/client';
+import { authApi } from '../api';
 import { IS_TEST } from '../config/envConfig';
 
 import LoginPanel from '../components/AdminPage/LoginPanel'
@@ -21,13 +20,11 @@ import UserRolePanel from '../components/AdminPage/UserRolePanel';
 import DamageCoefficientPanel from '../components/AdminPage/DamageCoefficientPanel';
 import ResourceInfoPanel from '../components/AdminPage/ResourceInfoPanel.jsx';
 import ManualEditorPanel from '../components/AdminPage/ManualEditorPanel.jsx';
-import ShipFormFields from '../components/AdminPage/ShipFormFields.jsx';
 import ShipDataPanel from '../components/AdminPage/ShipDataPanel.jsx';
 import MatchRecordPanel from '../components/AdminPage/MatchRecordPanel.jsx';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 // 舰种映射（BB, CA, CL, CV, DD, DDG, SCA, BASE, AIR）
 export const SHIP_TYPES = [
@@ -79,20 +76,21 @@ const AdminPage = () => {
         // 通过 Me 接口校验登录态
         authApi.me(saved.token).then((res) => {
             const { Role } = res.data;
-            if (Role != "SuperAdmin" && Role != "Admin") {
-                setAuth(null)
+            if (Role !== "SuperAdmin" && Role !== "Admin") {
+                clearAuth();
+                setAuth(null);
                 return;
             }
             setAuth(saved)
         }).catch((err) => {
             const status = err.response?.status;
             if (status === 401 || status === 403) {
-                clearAuth();
                 messageApi.warning('登录态已过期，请重新登录');
             } else {
-                // 网络或其他异常时保留本地登录态，允许继续使用
-                setAuth(saved);
+                messageApi.error('管理员身份校验失败，请重新登录');
             }
+            clearAuth();
+            setAuth(null);
         }).finally(() => {
             setInitializing(false);
         });
