@@ -29,6 +29,8 @@ const CAMP_LABELS = {
     Germany: '铁血',
     France: '鸢尾',
     Japan: '重樱',
+    Collab: '联动',
+    META: '余烬',
     Siren: '塞壬',
 };
 
@@ -84,6 +86,7 @@ const ShipDataPanel = ({ token }) => {
     const [fetchLoading, setFetchLoading] = useState(false);
     const [nameMap, setNameMap] = useState({});
     const [searchText, setSearchText] = useState('');
+    const shipTypeFilters = useMemo(() => SHIP_TYPES.map(({ label, value }) => ({ text: label, value })), []);
 
     // 加载 NameMap 用于中文名查表
     useEffect(() => {
@@ -306,6 +309,10 @@ const ShipDataPanel = ({ token }) => {
 
     const batchColumns = [
         {
+            title: '#', key: 'index', width: 50,
+            render: (_, __, index) => index + 1,
+        },
+        {
             title: '中文名', dataIndex: 'Name', key: 'cnName', width: 120, ellipsis: true,
             sorter: (a, b) => zhNameCollator.compare(nameMap[a.Name] || a.Name, nameMap[b.Name] || b.Name),
             render: (v) => {
@@ -321,7 +328,9 @@ const ShipDataPanel = ({ token }) => {
             render: (v) => CAMP_LABELS[v] || v,
         },
         {
-            title: 'Type', dataIndex: 'Type', key: 'Type', width: 150, sorter: (a, b) => a.Type - b.Type,
+            title: 'Type', dataIndex: 'Type', key: 'Type', width: 150,
+            filters: shipTypeFilters,
+            onFilter: (value, record) => record.Type === value,
             render: (v) => {
                 const t = SHIP_TYPES.find(x => x.value === v);
                 return <Tag>{t ? t.label : v}</Tag>;
