@@ -1,6 +1,8 @@
 import serverConfig from '../config/serverConfig';
 import { fileApiClient, gameApiClient, rootApiClient, userApiClient } from './client';
 
+export const gameServerBaseUrl = serverConfig.gameServerBaseUrl;
+
 const withToken = (token, extraHeaders = {}) => ({
     headers: {
         Token: token,

@@ -8,7 +8,7 @@ import {
 import {
     BookOutlined, LogoutOutlined, SafetyCertificateOutlined,
     SettingOutlined, CloudUploadOutlined, DatabaseOutlined,
-    FileTextOutlined,
+    FileTextOutlined, CodeOutlined,
 } from '@ant-design/icons';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -22,6 +22,7 @@ import ResourceInfoPanel from '../components/AdminPage/ResourceInfoPanel.jsx';
 import ManualEditorPanel from '../components/AdminPage/ManualEditorPanel.jsx';
 import ShipDataPanel from '../components/AdminPage/ShipDataPanel.jsx';
 import MatchRecordPanel from '../components/AdminPage/MatchRecordPanel.jsx';
+import ServerLogPanel from '../components/AdminPage/ServerLogPanel.jsx';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -137,6 +138,11 @@ const AdminPage = () => {
             key: 'ship-data',
             label: <Space><DatabaseOutlined />舰船配置更新</Space>,
             children: <ShipDataPanel token={auth?.token} />,
+        },
+        {
+            key: 'server-log',
+            label: <Space><CodeOutlined />服务器日志</Space>,
+            children: <ServerLogPanel token={auth?.token} />,
         },
     ];
 
