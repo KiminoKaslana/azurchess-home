@@ -10,8 +10,7 @@ import {
 } from '@ant-design/icons';
 import Header from '../Header';
 import Footer from '../Footer';
-import { authApi, gameApi, staticApi, userApi } from '../../api';
-import { fileApiClient } from '../../api/client';
+import { authApi, fetchShipsData, gameApi, staticApi, userApi } from '../../api';
 
 import serverConfig from '../../config/serverConfig';
 import { SHIP_TYPES, SHIP_WEAPON_TYPES } from "../../pages/AdminPage"
@@ -98,19 +97,7 @@ const ShipDataPanel = ({ token }) => {
     const handleFetchShips = useCallback(async () => {
         setFetchLoading(true);
         try {
-            // 1. 获取资源信息列表，找到 Ships.json
-            const resInfoRes = await gameApi.getResourceInfo();
-            const resourceList = Array.isArray(resInfoRes.data) ? resInfoRes.data : [];
-            const shipResource = resourceList.find(r => r.Name === 'Ships.json');
-            if (!shipResource || !shipResource.URL) {
-                messageApi.error('未在资源列表中找到 Ships.json 记录');
-                return;
-            }
-
-            // 2. 从资源信息中提取路径，通过 fileApiClient 获取文件（自动兼容 dev 代理）
-            const pathname = new URL(shipResource.URL).pathname;
-            const res = await fileApiClient.get(pathname);
-            const data = Array.isArray(res.data) ? res.data : Object.values(res.data);
+            const data = await fetchShipsData();
             setShipList(data.map((s, i) => ({ ...s, _key: `remote_${i}_${Date.now()}` })));
             messageApi.success(`已加载 ${data.length} 条舰船数据`);
         } catch (err) {

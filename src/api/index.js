@@ -1,3 +1,4 @@
+import axios from 'axios';
 import serverConfig from '../config/serverConfig';
 import { fileApiClient, gameApiClient, rootApiClient, userApiClient } from './client';
 
@@ -150,3 +151,30 @@ export const staticApi = {
         return rootApiClient.get('/downloadConfig.json');
     },
 };
+
+const normalizeShipsData = (data) => (Array.isArray(data) ? data : Object.values(data));
+
+/** 拉取 Ships.json：优先用资源清单完整 URL，再回退同域 pathname 与 /Common/Ships.json */
+export async function fetchShipsData() {
+    const resInfoRes = await gameApi.getResourceInfo();
+    const resourceList = Array.isArray(resInfoRes.data) ? resInfoRes.data : [];
+    const shipResource = resourceList.find((r) => r.Name === 'Ships.json');
+
+    if (shipResource?.URL) {
+        try {
+            const res = await axios.get(shipResource.URL);
+            return normalizeShipsData(res.data);
+        } catch {
+            try {
+                const pathname = new URL(shipResource.URL).pathname;
+                const res = await fileApiClient.get(pathname);
+                return normalizeShipsData(res.data);
+            } catch {
+                // fall through to static path
+            }
+        }
+    }
+
+    const res = await staticApi.getShips();
+    return normalizeShipsData(res.data);
+}
