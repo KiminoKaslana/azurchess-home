@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     Card, Input, Button, Typography, Select,
     Space, Upload, Alert, App as AntdApp, Table, Tag,
-    Progress,
+    Progress, Popconfirm,
 } from 'antd';
 import {
     CloudUploadOutlined, ReloadOutlined, InboxOutlined, DeleteOutlined,
+    SyncOutlined,
 } from '@ant-design/icons';
 import { gameApi } from '../../api';
 
@@ -101,6 +102,7 @@ const ResourceInfoPanel = ({ token }) => {
     const [uploadPhase, setUploadPhase] = useState('');
     const [lastUploaded, setLastUploaded] = useState(null);
     const [uploadQueue, setUploadQueue] = useState([]);
+    const [regenerating, setRegenerating] = useState(false);
 
     const mapResourceRow = useCallback((resource) => ({
         key: `${resource.Name || 'resource'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -146,6 +148,29 @@ const ResourceInfoPanel = ({ token }) => {
     const handlePlatformChange = (value) => {
         setPlatform(value);
         loadResources(value);
+    };
+
+    const handleRegenerateResourceInfo = async () => {
+        if (!token) {
+            messageApi.error('请先登录 Admin 账号');
+            return;
+        }
+
+        setRegenerating(true);
+        try {
+            const res = await gameApi.regenerateResourceInfo(token);
+            const msg = typeof res.data === 'string' ? res.data : '已计划重新生成 ResourceInfo';
+            messageApi.success(msg);
+            messageApi.info('扫描完成后请点击「加载当前配置」刷新列表');
+        } catch (err) {
+            const status = err.response?.status;
+            const msg = err.response?.data;
+            if (status === 401 || status === 403) messageApi.error('权限不足或 Token 无效');
+            else if (status === 503) messageApi.error(msg || 'OSS 未启用');
+            else messageApi.error(msg || '重新生成 ResourceInfo 失败');
+        } finally {
+            setRegenerating(false);
+        }
     };
 
     const updateQueuedFile = (key, patch) => {
@@ -385,11 +410,29 @@ const ResourceInfoPanel = ({ token }) => {
                         >
                             加载当前配置
                         </Button>
+                        <Popconfirm
+                            title="从 OSS 重新生成 ResourceInfo？"
+                            description="将扫描 OSS 重建各平台资源清单文件，耗时可能较长。Ships.json 会保留最新版本条目。"
+                            okText="确认重新生成"
+                            cancelText="取消"
+                            okButtonProps={{ danger: true, loading: regenerating }}
+                            onConfirm={handleRegenerateResourceInfo}
+                            disabled={!token || regenerating}
+                        >
+                            <Button
+                                danger
+                                icon={<SyncOutlined spin={regenerating} />}
+                                loading={regenerating}
+                                disabled={!token}
+                            >
+                                重新生成资源列表
+                            </Button>
+                        </Popconfirm>
                     </Space>
                 }
             >
                 <Alert
-                    message="此操作需要 Admin 及以上权限。页面会先加载当前配置；切换 Platform 后可重新加载对应 ResourceInfo。"
+                    message="此操作需要 Admin 及以上权限。页面会先加载当前配置；切换 Platform 后可重新加载对应 ResourceInfo。「重新生成资源列表」会调用 RegenerateResourceInfo，从 OSS 扫描重建 ResourceInfo.json。"
                     type="info"
                     showIcon
                     style={{ marginBottom: 12 }}
