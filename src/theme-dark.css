@@ -307,6 +307,13 @@
     margin-bottom: 18px;
 }
 
+.acb-downloads .ant-btn-primary:disabled {
+    background: var(--acb-disabled);
+    border-color: var(--acb-disabled);
+    color: rgba(255, 255, 255, 0.45);
+    cursor: not-allowed;
+}
+
 .acb-hero__version {
     margin: 0;
     font-size: 13px;

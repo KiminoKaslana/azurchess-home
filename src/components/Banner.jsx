@@ -19,18 +19,41 @@ const RELEASE_BASE = 'https://file.azurchess.2d-gate.cc/Releases/Dev';
 // Worker / 网络不可用时的回退版本
 const FALLBACK_VERSION = '0.27.3.14';
 
+const appleSiliconFilename = (version) => `${version} - Apple Silicon.zip`;
+
 // 按 R2 (Releases/Dev) 文件命名规则拼接下载链接，含空格/中文需 URL 编码
 const buildDownloads = (version) => [
     { key: 'win64', label: '下载游戏（Win64）', url: `${RELEASE_BASE}/${encodeURIComponent(`${version}.zip`)}` },
     { key: 'win64-pack', label: '下载游戏（Win64+资源包）', url: `${RELEASE_BASE}/${encodeURIComponent(`${version} - 含资源包.zip`)}` },
     { key: 'android', label: '下载游戏（Android）', url: `${RELEASE_BASE}/${encodeURIComponent(`AzurChessBeta-${version}.apk`)}` },
+    {
+        key: 'apple-silicon',
+        label: '下载游戏（Apple Silicon）',
+        url: `${RELEASE_BASE}/${encodeURIComponent(appleSiliconFilename(version))}`,
+        optional: true,
+    },
 ];
+
+// 经本站 /api/file 代理探测 OSS 是否存在对应发布包（避免跨域）
+const checkReleaseAvailable = async (filename) => {
+    try {
+        const res = await fetch(`/api/file/Releases/Dev/${encodeURIComponent(filename)}`, {
+            method: 'HEAD',
+            cache: 'no-store',
+        });
+        return res.ok;
+    } catch (error) {
+        console.error('探测发布包失败:', error);
+        return false;
+    }
+};
 
 // 测试服首屏（暗色 / 新版式）—— 当前工作区现状
 const TestBanner = () => {
     const [bannerImages, setBannerImages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [version, setVersion] = useState(CURRENT_ENV.version || FALLBACK_VERSION);
+    const [appleSiliconAvailable, setAppleSiliconAvailable] = useState(null);
 
     useEffect(() => {
         const fetchImages = () => {
@@ -64,6 +87,23 @@ const TestBanner = () => {
         fetchImages();
         fetchVersion();
     }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const probeAppleSilicon = async () => {
+            setAppleSiliconAvailable(null);
+            const available = await checkReleaseAvailable(appleSiliconFilename(version));
+            if (!cancelled) {
+                setAppleSiliconAvailable(available);
+            }
+        };
+
+        probeAppleSilicon();
+        return () => {
+            cancelled = true;
+        };
+    }, [version]);
 
     // 下载按钮按当前版本动态拼接
     const downloadButtons = buildDownloads(version);
@@ -121,17 +161,28 @@ const TestBanner = () => {
                         </div>
 
                         <div className="acb-downloads">
-                            {downloadButtons.map((item) => (
-                                <Button
-                                    key={item.key}
-                                    type="primary"
-                                    size="large"
-                                    icon={<DownloadOutlined />}
-                                    href={item.url}
-                                >
-                                    {item.label}
-                                </Button>
-                            ))}
+                            {downloadButtons.map((item) => {
+                                const isOptional = item.optional === true;
+                                const available = !isOptional || appleSiliconAvailable === true;
+
+                                return (
+                                    <Button
+                                        key={item.key}
+                                        type="primary"
+                                        size="large"
+                                        icon={<DownloadOutlined />}
+                                        href={available ? item.url : undefined}
+                                        disabled={!available}
+                                        title={
+                                            isOptional && !available
+                                                ? '当前版本暂无 Apple Silicon 安装包'
+                                                : undefined
+                                        }
+                                    >
+                                        {item.label}
+                                    </Button>
+                                );
+                            })}
                             <Button size="large" href={OFFICIAL_URL} target="_blank" rel="noopener noreferrer">
                                 官网正式服
                             </Button>
