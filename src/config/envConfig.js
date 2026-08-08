@@ -73,9 +73,9 @@ export const envProfiles = {
 };
 
 export const getInitialEnvName = () => {
-  if (typeof window === 'undefined') return ENV_NAMES.PROD;
+  if (typeof window === 'undefined') return ENV_NAMES.TEST;
   const saved = window.localStorage.getItem(ENV_STORAGE_KEY);
-  return envProfiles[saved] ? saved : ENV_NAMES.PROD;
+  return envProfiles[saved] ? saved : ENV_NAMES.TEST;
 };
 
 // 本次页面加载所处的环境(reload 切换,故整段会话内保持不变)

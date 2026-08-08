@@ -33,6 +33,18 @@ module.exports = function (app) {
         })
     );
 
+    // 特别竞拍代理：/auction/* → 竞拍服务（生产由 nginx 反代，这里仅开发时生效）
+    app.use(
+        '/auction',
+        createProxyMiddleware({
+            target: 'http://localhost:5173',
+            changeOrigin: true,
+            pathRewrite: { '^/auction': '' },
+            ws: true,
+            logLevel: 'warn',
+        })
+    );
+
     // 静态文件代理：/api/file/* → FILE_TARGET（默认正式服，可经 SERVER_ENV 切换）
     app.use(
         '/api/file',

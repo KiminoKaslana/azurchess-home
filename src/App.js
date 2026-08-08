@@ -7,6 +7,7 @@ import ManualPage from './pages/ManualPage';
 import AdminPage from './pages/AdminPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ReportPage from './pages/ReportPage';
+import AuctionPage from './pages/AuctionPage';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { CURRENT_ENV } from './config/envConfig';
@@ -30,6 +31,7 @@ const App = () => {
               <Route path="/manual" element={<ManualPage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/report" element={<ReportPage />} />
+              <Route path="/auction" element={<AuctionPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </Router>
