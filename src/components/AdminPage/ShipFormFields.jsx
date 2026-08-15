@@ -13,7 +13,7 @@ import Footer from '../Footer';
 import { authApi, gameApi, staticApi, userApi } from '../../api';
 import { fileApiClient } from '../../api/client';
 
-import { SHIP_TYPES, SHIP_WEAPON_TYPES } from "../../pages/AdminPage"
+import { SHIP_TYPES, SHIP_WEAPON_TYPES, SHIP_ARMOR_TYPES } from "../../pages/AdminPage"
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -43,7 +43,7 @@ const ShipFormFields = () => (
             </Col>
         </Row>
         <Row gutter={16}>
-            <Col span={8}>
+            <Col span={6}>
                 <Form.Item name="WeaponType" label="WeaponType（武器类型）">
                     <Select>
                         {SHIP_WEAPON_TYPES.map(t => (
@@ -54,12 +54,23 @@ const ShipFormFields = () => (
                     </Select>
                 </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
+                <Form.Item name="ArmorType" label="ArmorType（装甲类型）">
+                    <Select>
+                        {SHIP_ARMOR_TYPES.map(t => (
+                            <Option key={t.value} value={t.value}>
+                                <Tag color={t.color}>{t.label}</Tag>
+                            </Option>
+                        ))}
+                    </Select>
+                </Form.Item>
+            </Col>
+            <Col span={6}>
                 <Form.Item name="SkillType" label="SkillType（技能）">
                     <Input placeholder="如 SCA" />
                 </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
                 <Form.Item name="DeployCost" label="DeployCost（费用）">
                     <InputNumber min={0} style={{ width: '100%' }} />
                 </Form.Item>

@@ -13,7 +13,7 @@ import Footer from '../Footer';
 import { authApi, fetchShipsData, gameApi, staticApi, userApi } from '../../api';
 
 import serverConfig from '../../config/serverConfig';
-import { SHIP_TYPES, SHIP_WEAPON_TYPES } from "../../pages/AdminPage"
+import { SHIP_TYPES, SHIP_WEAPON_TYPES, SHIP_ARMOR_TYPES } from "../../pages/AdminPage"
 import ShipFormFields from './ShipFormFields';
 
 const { Title, Text } = Typography;
@@ -34,6 +34,17 @@ const CAMP_LABELS = {
 };
 
 const CAMP_FILTERS = Object.entries(CAMP_LABELS).map(([value, text]) => ({ text, value }));
+
+// 旧数据缺失 ArmorType 时的前端兜底映射，与服务端一次性回填规则保持一致。
+const DEFAULT_ARMOR_BY_SHIP_TYPE = {
+    0: 2, // BB -> Heavy
+    1: 1, // CA -> Medium
+    2: 0, // CL -> Light
+    3: 1, // CV -> Medium
+    4: 0, // DD -> Light
+    5: 0, // DDG -> Light
+    6: 2, // SCA -> Heavy
+};
 
 const zhNameCollator = new Intl.Collator('zh-CN-u-co-pinyin', {
     numeric: true,
@@ -58,6 +69,7 @@ const EMPTY_SHIP = {
     TorpedoProtectCoefficient: 0,
     TorpedoDamage: 0,
     WeaponType: 0,
+    ArmorType: 0,
     ChildAircraftServerTime: 3,
     CriticalProbability: 1,
     DeployCost: 3,
@@ -86,6 +98,7 @@ const ShipDataPanel = ({ token }) => {
     const [nameMap, setNameMap] = useState({});
     const [searchText, setSearchText] = useState('');
     const shipTypeFilters = useMemo(() => SHIP_TYPES.map(({ label, value }) => ({ text: label, value })), []);
+    const armorTypeFilters = useMemo(() => SHIP_ARMOR_TYPES.map(({ label, value }) => ({ text: label, value })), []);
 
     // 加载 NameMap 用于中文名查表
     useEffect(() => {
@@ -98,7 +111,11 @@ const ShipDataPanel = ({ token }) => {
         setFetchLoading(true);
         try {
             const data = await fetchShipsData();
-            setShipList(data.map((s, i) => ({ ...s, _key: `remote_${i}_${Date.now()}` })));
+            setShipList(data.map((s, i) => ({
+                ...s,
+                ArmorType: s.ArmorType ?? DEFAULT_ARMOR_BY_SHIP_TYPE[s.Type] ?? 0,
+                _key: `remote_${i}_${Date.now()}`,
+            })));
             messageApi.success(`已加载 ${data.length} 条舰船数据`);
         } catch (err) {
             messageApi.error('加载舰船数据失败，请检查网络或获取资源信息接口是否正常');
@@ -327,6 +344,15 @@ const ShipDataPanel = ({ token }) => {
             title: 'WeaponType', dataIndex: 'WeaponType', key: 'WeaponType', width: 150, sorter: (a, b) => a.WeaponType - b.WeaponType,
             render: (v) => {
                 const t = SHIP_WEAPON_TYPES.find(x => x.value === v);
+                return t ? <Tag color={t.color}>{t.label}</Tag> : v;
+            },
+        },
+        {
+            title: 'ArmorType', dataIndex: 'ArmorType', key: 'ArmorType', width: 140, sorter: (a, b) => (a.ArmorType || 0) - (b.ArmorType || 0),
+            filters: armorTypeFilters,
+            onFilter: (value, record) => record.ArmorType === value,
+            render: (v) => {
+                const t = SHIP_ARMOR_TYPES.find(x => x.value === v);
                 return t ? <Tag color={t.color}>{t.label}</Tag> : v;
             },
         },

@@ -30,6 +30,22 @@ const CompendiumPage = () => {
         3: { color: "#009b53ff", name: "鱼雷" },
         4: { color: "#94007bff", name: "航弹" }
     };
+    const armorTypeMap = {
+        0: { color: "#009b53ff", name: "轻型" },
+        1: { color: "#beab00ff", name: "中型" },
+        2: { color: "#a50000ff", name: "重型" }
+    };
+    // 旧数据缺失 ArmorType 时的兜底，与服务端一次性回填规则一致。
+    const defaultArmorByShipType = {
+        0: 2, // BB -> Heavy
+        1: 1, // CA -> Medium
+        2: 0, // CL -> Light
+        3: 1, // CV -> Medium
+        4: 0, // DD -> Light
+        5: 0, // DDG -> Light
+        6: 2, // SCA -> Heavy
+    };
+    const getArmorType = (char) => char.ArmorType ?? defaultArmorByShipType[char.Type] ?? 0;
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -169,10 +185,17 @@ const CompendiumPage = () => {
                                                 <Tag style={{ fontSize: 12 }}>
                                                     {typeMap[char.Type] || `类型 ${char.Type}`}
                                                 </Tag>
-                                                <Tag style={{ fontSize: 12 }} color={weaponTypeMap[char.WeaponType].color || "white"}>
-                                                    {weaponTypeMap[char.WeaponType].name || `类型 ${char.WeaponType}`}
+                                                <Tag style={{ fontSize: 12 }} color={weaponTypeMap[char.WeaponType]?.color || "white"}>
+                                                    {weaponTypeMap[char.WeaponType]?.name || `武器 ${char.WeaponType}`}
+                                                </Tag>
+                                                <Tag style={{ fontSize: 12 }} color={armorTypeMap[getArmorType(char)]?.color || "default"}>
+                                                    {armorTypeMap[getArmorType(char)]?.name || `装甲 ${getArmorType(char)}`}
                                                 </Tag>
                                                 <div style={{ marginTop: 8, fontSize: 14, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap' }}>
+                                                        <Text type="secondary">装甲类型: </Text>
+                                                        <Text>{armorTypeMap[getArmorType(char)]?.name || `类型 ${getArmorType(char)}`}</Text>
+                                                    </div>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap' }}>
                                                         <Text type="secondary">生命值: </Text>
                                                         <Text>{char.MaxHP}</Text>

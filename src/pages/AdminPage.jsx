@@ -49,6 +49,13 @@ export const SHIP_WEAPON_TYPES = [
     { value: 4, label: 'Bomb（航弹）', color: '#94007b' },
 ];
 
+// 装甲类型映射（Light, Medium, Heavy）
+export const SHIP_ARMOR_TYPES = [
+    { value: 0, label: '轻型/Light', color: '#009b53' },
+    { value: 1, label: '中型/Medium', color: '#beab00' },
+    { value: 2, label: '重型/Heavy', color: '#a50000' },
+];
+
 // ────────────────────────────────────────────────
 // 工具函数：从 localStorage 读写 auth 信息
 // ────────────────────────────────────────────────

@@ -16,13 +16,19 @@ import { fileApiClient } from '../../api/client';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// 武器类型（5种）× 舰船类型（9种）默认矩阵
-const DEFAULT_DAMAGE_MATRIX = Array.from({ length: 5 }, () => Array(9).fill(1.0));
+// 武器类型（5种）× 目标类型（轻型/中型/重型装甲 + 基地 + 飞机）默认矩阵
+const DEFAULT_DAMAGE_MATRIX = [
+    [1.3, 1.0, 0.8, 1.0, 1.0], // 高爆：轻型 / 中型 / 重型 / 基地 / 飞机
+    [0.8, 1.0, 1.3, 1.0, 1.0], // 穿甲
+    [1.0, 1.0, 1.0, 1.0, 1.0], // 导弹
+    [1.0, 1.0, 1.0, 1.0, 1.0], // 鱼雷
+    [1.3, 1.0, 0.8, 1.0, 1.0], // 航弹
+];
 const WEAPON_TYPES = ['高爆', '穿甲', '导弹', '鱼雷', '航弹'];
-const UNIT_TYPES = ['战列', '重巡', '轻巡', '航母', '驱逐', '导弹驱逐', '超巡', '基地', '飞机'];
+const TARGET_TYPES = ['轻型/Light', '中型/Medium', '重型/Heavy', '基地/Base', '飞机/Aircraft'];
 const normalizeDamageMatrix = (source) => {
     const rowCount = WEAPON_TYPES.length;
-    const colCount = UNIT_TYPES.length;
+    const colCount = TARGET_TYPES.length;
     return Array.from({ length: rowCount }, (_, rowIdx) =>
         Array.from({ length: colCount }, (_, colIdx) => {
             const raw = source?.[rowIdx]?.[colIdx];
@@ -91,17 +97,17 @@ const DamageCoefficientPanel = ({ token }) => {
 
     const columns = [
         {
-            title: '武器 \\ 舰船',
+            title: '弹种 \\ 装甲类型',
             dataIndex: 'weaponType',
             key: 'weaponType',
             fixed: 'left',
             width: 90,
             render: (text) => <Tag color="purple">{text}</Tag>,
         },
-        ...UNIT_TYPES.map((unit, colIdx) => ({
+        ...TARGET_TYPES.map((unit, colIdx) => ({
             title: unit,
             key: unit,
-            width: 90,
+            width: 100,
             render: (_, record, rowIdx) => (
                 <InputNumber
                     size="small"
@@ -119,7 +125,7 @@ const DamageCoefficientPanel = ({ token }) => {
 
     return (
         <Card
-            title="伤害系数矩阵（5 武器类型 × 9 舰船类型）"
+            title="伤害系数矩阵（弹种 × 装甲类型，保留基地/飞机项）"
             extra={
                 <Button icon={<ReloadOutlined />} loading={fetchLoading} onClick={() => loadMatrix()}>
                     重新加载
