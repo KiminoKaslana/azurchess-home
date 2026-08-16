@@ -24,7 +24,6 @@ const appleSiliconFilename = (version) => `${version} - Apple Silicon.zip`;
 // 按 R2 (Releases/Dev) 文件命名规则拼接下载链接，含空格/中文需 URL 编码
 const buildDownloads = (version) => [
     { key: 'win64', label: '下载游戏（Win64）', url: `${RELEASE_BASE}/${encodeURIComponent(`${version}.zip`)}` },
-    { key: 'win64-pack', label: '下载游戏（Win64+资源包）', url: `${RELEASE_BASE}/${encodeURIComponent(`${version} - 含资源包.zip`)}` },
     { key: 'android', label: '下载游戏（Android）', url: `${RELEASE_BASE}/${encodeURIComponent(`AzurChessBeta-${version}.apk`)}` },
     {
         key: 'apple-silicon',
