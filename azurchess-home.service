@@ -1,0 +1,28 @@
+[Unit]
+# azurchess-home 是纯静态站（CRA SPA），没有常驻进程，
+# 与 AzurChessCloud/AzurAuction/2234 的 Type=simple 不同：
+# 本单元是 oneshot 构建服务 —— "依存安装 + npm run build + SELinux 打标签"交给 systemd。
+# 变更一次代码后执行：sudo systemctl restart azurchess-home
+Description=AzurChess Home - CRA SPA 构建服务 (npm ci + build + restorecon)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/manjuu/azurchess-home
+# 仓库属主是 chtholly（azurchess 用户无写权限；该用户只能跑 Cloud 等长驻服务）
+User=chtholly
+Group=manjuu
+# 运行时使用系统安装的 node（sudo dnf install nodejs），不再依赖个人 nvm 路径；
+# 开发时可继续用 nvm，互不影响。默认 PATH 已含 /usr/bin，勿再覆写为个人路径。
+Environment=NODE_ENV=production
+# 每次构建前按 package-lock.json 全新安装依赖（保证可复现）；
+# 需网络，故 After/Wants network-online.target。若希望增量提速可换成 npm install。
+ExecStart=/usr/bin/npm run build
+ExecStartPost=+/usr/sbin/restorecon -Rv /opt/manjuu/azurchess-home/build
+StandardOutput=append:/var/log/manjuu/azurchess-home.log
+StandardError=append:/var/log/manjuu/azurchess-home.log
+
+[Install]
+WantedBy=multi-user.target
