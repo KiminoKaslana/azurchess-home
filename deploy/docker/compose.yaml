@@ -1,0 +1,19 @@
+# 服务器上的部署目录（默认 /srv/azurchess-home）里放这个文件和 .env（由 GitHub Actions 生成）。
+# 纯静态站点，无状态；通过共享网络 azur-edge 由 AzurChess/azurchess-gateway 的 nginx-edge 对外提供。
+
+services:
+  azurchess-home:
+    image: ${IMAGE:-ghcr.io/kiminokaslana/azurchess-home:latest}
+    container_name: azurchess-home
+    restart: unless-stopped
+    networks:
+      - azur-edge
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+networks:
+  azur-edge:
+    external: true
